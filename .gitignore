@@ -39,6 +39,7 @@ MayaScene/Debug/MayaScene.exe
 MayaScene/Debug/MayaScene.exp
 MayaScene/Debug/MayaScene.ilk
 MayaScene/Debug/MayaScene.lib
+MayaScene/Debug/MayaScene.log
 MayaScene/Debug/MayaScene.obj
 MayaScene/Debug/MayaScene.pdb
 MayaScene/Debug/MayaScene.tlog/CL.command.1.tlog
@@ -49,6 +50,7 @@ MayaScene/Debug/MayaScene.tlog/link.read.1.tlog
 MayaScene/Debug/MayaScene.tlog/link.write.1.tlog
 MayaScene/Debug/MayaScene.tlog/MayaScene.lastbuildstate
 MayaScene/Debug/MayaScene.tlog/MayaScene.write.1u.tlog
+MayaScene/Debug/MayaScene.vcxproj.FileListAbsolute.txt
 MayaScene/Debug/Memory.obj
 MayaScene/Debug/Mutex.obj
 MayaScene/Debug/vc143.idb
