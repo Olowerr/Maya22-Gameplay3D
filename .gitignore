@@ -1,4 +1,4 @@
-
+*.vsidx
 .vs/Maya22Gamplay3D/FileContentIndex/3cc4efc2-859e-4a03-9d12-140c1fe3c6be.vsidx
 .vs/Maya22Gamplay3D/FileContentIndex/read.lock
 .vs/Maya22Gamplay3D/v17/.suo
@@ -66,7 +66,6 @@ MayaScene/Debug/MayaScene.Build.CppClean.log
 MayaScene/Debug/MayaScene.exe.recipe
 MayaScene/Debug/MayaScene.log
 MayaScene/Debug/MayaScene.vcxproj.FileListAbsolute.txt
-MayaScene/MayaScene.vcxproj
 .vs/Maya22Gamplay3D/v17/ipch/AutoPCH/d58834ba888774d9/MAYASCENE.ipch
 .vs/Maya22Gamplay3D/FileContentIndex/45b0249a-9f8c-4f46-b594-0d84326a639e.vsidx
 MayaScene/Debug/MayaScene.Build.CppClean.log
@@ -76,8 +75,6 @@ MayaScene/Debug/MayaScene.vcxproj.FileListAbsolute.txt
 MayaPlugin/loadPlugin.py
 .vs/Maya22Gamplay3D/FileContentIndex/a6ff0009-680f-42da-8f07-6c5bd7b48bf6.vsidx
 .vs/Maya22Gamplay3D/FileContentIndex/34989857-fd00-4537-b213-f01b7faf2ee9.vsidx
-MayaPlugin/loadPlugin.py
-MayaPlugin/unloadPlugin.py
 MayaScene/Debug/MayaScene.Build.CppClean.log
 MayaScene/Debug/MayaScene.exe.recipe
 MayaScene/Debug/MayaScene.log
@@ -92,3 +89,8 @@ MayaScene/Debug/MayaScene.vcxproj.FileListAbsolute.txt
 .vs/Maya22Gamplay3D/FileContentIndex/b46a7f1b-f906-481c-8cf0-36e0326ac453.vsidx
 .vs/Maya22Gamplay3D/FileContentIndex/d158888c-3db8-4c9a-a94a-b49bc1a41294.vsidx
 .vs/Maya22Gamplay3D/v17/ipch/AutoPCH/3b4320f9421b2523/MAYASCENE.ipch
+.vs/Maya22Gamplay3D/FileContentIndex/72c4ea7c-3d84-4c79-a8ed-eef9b4c12f77.vsidx
+.vs/Maya22Gamplay3D/FileContentIndex/a9b840de-5039-4192-8ae2-cc24b22fb961.vsidx
+.vs/Maya22Gamplay3D/FileContentIndex/b5e27840-a355-4729-abe8-df05e7d9336e.vsidx
+.vs/Maya22Gamplay3D/v17/ipch/AutoPCH/6661be5c58eec90c/COMLIB.ipch
+.vs/Maya22Gamplay3D/v17/ipch/AutoPCH/b67b83a49d55ef26/PLUGIN.ipch

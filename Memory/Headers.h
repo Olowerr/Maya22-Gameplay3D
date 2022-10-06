@@ -1,12 +1,19 @@
 #pragma once
 
-// Header for sending information about next message
-
 constexpr size_t MB = 1048576;
 
 enum Headers 
 {
-	MESSAGE
+	MESSAGE,
+	NEW_MESH,
+	MESH_DATA
+};
+
+struct Vertex
+{
+	float position[3];
+	//float uv[3];
+	//float normal[3];
 };
 
 struct SectionHeader
@@ -20,4 +27,14 @@ struct MessageHeader
 {
 	char message[1024]{};
 	float position[3];
+};
+
+struct MeshDataHeader
+{
+	int numVertex;
+};
+
+struct NewMeshHeader
+{
+	char message[1024]{};
 };
