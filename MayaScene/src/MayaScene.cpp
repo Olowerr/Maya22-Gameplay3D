@@ -16,16 +16,12 @@ MayaViewer::MayaViewer()
 
 MayaViewer::~MayaViewer()
 {
-#if BRO == 1
 	delete consumerBuffer;
-#endif
 }
 
 void MayaViewer::initialize()
 {
-#if BRO == 1
 	consumerBuffer = new Comlib(L"Filemap",150, ProcessType::Consumer);
-#endif
 
     // Load game scene from file
 	_scene = Scene::create();
@@ -87,7 +83,6 @@ void MayaViewer::update(float elapsedTime)
 	float step = 360.0 / float(gModelCount);
 	char name[10] = {};
 
-#if BRO == 1
 	while (consumerBuffer->Recieve(msg, mainHeader))
 	{
 		if (mainHeader->header == MESSAGE)
@@ -116,7 +111,6 @@ void MayaViewer::update(float elapsedTime)
 			delete[]str;
 		}
 	}
-#endif
 
 
 	for (int i = 0; i < gModelCount; i++)

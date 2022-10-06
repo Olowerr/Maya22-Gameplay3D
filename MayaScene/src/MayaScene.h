@@ -2,13 +2,7 @@
 #define MayaViewer_H_
 
 #include "gameplay.h"
-
-#define BRO 1
-
-#if BRO == 1
-#endif
 #include "../../Memory/Comlib.h"
-//#include "../Comlib.h"
 
 using namespace gameplay;
 
@@ -76,15 +70,12 @@ private:
 	Mesh* createCubeMesh(float size = 1.0f);
 	Material* createMaterial();
 
-
     Scene* _scene;
     bool _wireframe;
 
-#if BRO == 1
     Comlib* consumerBuffer;
     char* msg;
     SectionHeader* mainHeader;
-#endif
 };
 
 #endif

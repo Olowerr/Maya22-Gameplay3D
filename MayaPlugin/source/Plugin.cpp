@@ -45,24 +45,17 @@ void nodeAdded(MObject& node, void* clientData)
 			std::cout << "Transform nodeeeeeeeeeee\n";
 			std::cout << name << "\n";
 
-			NewMeshHeader header{};
+			MessageHeader header{};
 			memcpy(header.message, name.c_str(), strlen(name.c_str()));
-
-			SectionHeader secHeader;
-			secHeader.header = NEW_MESH;
-			secHeader.messageLength = sizeof(NewMeshHeader);
-			secHeader.messageID = 0;
-			producerBuffer->Send((char*)&header, &secHeader);
-
-			/*msgHeader.position[0] = 1.f;
-			msgHeader.position[1] = 2.f;
-			msgHeader.position[2] = 3.f;
+			header.position[0] = 1.f;
+			header.position[1] = 2.f;
+			header.position[2] = 3.f;
 
 			size_t msgLength = sizeof(MessageHeader) + 1;
 			char* msg = new char[msgLength];
 			size_t offset = 0;
 
-			memcpy(msg + offset, &msgHeader, sizeof(MessageHeader));
+			memcpy(msg + offset, &header, sizeof(MessageHeader));
 
 			SectionHeader secHeader;
 			secHeader.header = MESSAGE;
@@ -70,7 +63,7 @@ void nodeAdded(MObject& node, void* clientData)
 			secHeader.messageID = 0;
 			producerBuffer->Send(msg, &secHeader);
 
-			delete[]msg;*/
+			delete[]msg;
 		}
 	}
 }
