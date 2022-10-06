@@ -94,3 +94,6 @@ MayaScene/Debug/MayaScene.vcxproj.FileListAbsolute.txt
 .vs/Maya22Gamplay3D/FileContentIndex/b5e27840-a355-4729-abe8-df05e7d9336e.vsidx
 .vs/Maya22Gamplay3D/v17/ipch/AutoPCH/6661be5c58eec90c/COMLIB.ipch
 .vs/Maya22Gamplay3D/v17/ipch/AutoPCH/b67b83a49d55ef26/PLUGIN.ipch
+*.db
+*.bin
+*.vsidx
