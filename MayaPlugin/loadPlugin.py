@@ -21,7 +21,7 @@ answer = s.recv(1024)
 
 # load plugin
 
-s.send(b'loadPlugin("C:/Users/Oliver/source/repos/Maya22-Gamplay3D/MayaPlugin/build/x64/Debug/UD1447Project.mll")\n')
+s.send(b'loadPlugin("G:/UD1447/Maya22-Gameplay3D/MayaPlugin/build/x64/Debug/UD1447Project.mll")\n')
 
 # close socket with Maya
 s.close()

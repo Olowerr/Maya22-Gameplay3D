@@ -55,10 +55,11 @@ void MayaViewer::initialize()
 	for (int i = 0; i < gModelCount; i++)
 	{
 		models[i] = Model::create(mesh1);
-		mats[i] = models[i]->setMaterial( "res/shaders/textured.vert", "res/shaders/textured.frag", "POINT_LIGHT_COUNT 1");
+		mats[i] = models[i]->setMaterial( "res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
 		mats[i]->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
 		mats[i]->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
-		mats[i]->getParameter("u_ambientColor")->setValue(Vector3(0.1f, 0.1f, 0.2f));
+		mats[i]->getParameter("u_ambientColor")->setValue(Vector3(0.4f, 0.1f, 1.f));
+		mats[i]->getParameter("u_diffuseColor")->setValue(Vector4(0.1f, 1.f, 1.0f, 1.f));
 		mats[i]->getParameter("u_pointLightColor[0]")->setValue(lightNode->getLight()->getColor());
 		mats[i]->getParameter("u_pointLightPosition[0]")->bindValue(lightNode, &Node::getTranslationWorld);
 		mats[i]->getParameter("u_pointLightRangeInverse[0]")->bindValue(lightNode->getLight(), &Light::getRangeInverse);
