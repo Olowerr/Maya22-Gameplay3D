@@ -30,6 +30,12 @@
     <ClInclude Include="..\Memory\Mutex.h">
       <Filter>Source Files\Memory</Filter>
     </ClInclude>
+    <ClInclude Include="..\Memory\the stuff.h">
+      <Filter>Source Files\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Send.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Plugin.cpp">

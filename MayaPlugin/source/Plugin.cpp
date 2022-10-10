@@ -1,31 +1,20 @@
 #include "maya_includes.h"
-#include <maya/MTimer.h>
 #include <iostream>
 #include <algorithm>
 #include <vector>
 #include <queue>
 #include <unordered_map>
 
-#include "Comlib.h"
+#include "Send.h"
 
 Comlib* producerBuffer;
 std::unordered_map<std::string, MCallbackId> callbacks;
 MStatus status = MS::kSuccess;
 
-#define M_OK status == MS::kSuccess
-#define M_FAIL status != MS::kSuccess
+#define PRINT_EXTRA 0
+#define SEND 1
 
-void addCallback(std::string& name, MCallbackId id)
-{
-	static int i = 0;
-
-	if (callbacks.find(name) != callbacks.end())
-		name += std::to_string(i++);
-
-	callbacks[name] = id;
-}
-
-void addCallbackDelOld(std::string& name, MCallbackId id)
+void addCallback(const std::string& name, MCallbackId id)
 {
 	if (callbacks.count(name))
 		MMessage::removeCallback(callbacks[name]);
@@ -33,61 +22,80 @@ void addCallbackDelOld(std::string& name, MCallbackId id)
 	callbacks[name] = id;
 }
 
+void removeCallback(const std::string& name)
+{
+	if (callbacks.find(name) == callbacks.end())
+		return;
+
+	MNodeMessage::removeCallback(callbacks[name]);
+	callbacks.erase(name);
+}
+
+void meshTopoAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* clientData)
+{
+	if (msg & MNodeMessage::AttributeMessage::kAttributeEval)
+	{
+		MFnMesh mesh(plug.node(), &status);
+		std::string nodeName = mesh.name().asChar();
+		std::string plugName = plug.name().asChar();
+#if PRINT_EXTRA
+		printPlugPath(plug);
+#endif
+		if (M_OK2)
+		{
+			if (plugName.find(".outMesh") != -1)
+			{
+				std::cout << "Updating mesh: " << nodeName << "\n";
+				removeCallback(nodeName + "meshTopoAttriCB");			
+#if SEND
+				if (!sendMesh(mesh, producerBuffer))
+					std::cout << "Failed updating mesh: " << nodeName <<"\n";
+#endif
+			}
+		}
+	}
+}
+
+/*
+	EXTRUDE NOT WORKING PLS FIX MAN
+	EXTRUDE NOT WORKING PLS FIX MAN
+	EXTRUDE NOT WORKING PLS FIX MAN
+	EXTRUDE NOT WORKING PLS FIX MAN
+	EXTRUDE NOT WORKING PLS FIX MAN
+	EXTRUDE NOT WORKING PLS FIX MAN
+	EXTRUDE NOT WORKING PLS FIX MAN
+	EXTRUDE NOT WORKING PLS FIX MAN
+	EXTRUDE NOT WORKING PLS FIX MAN
+	EXTRUDE NOT WORKING PLS FIX MAN
+*/
+
+void meshTopoChanged(MObject& node, void* clientData)
+{
+	MCallbackId callbackId = MNodeMessage::addAttributeChangedCallback(node, meshTopoAttributeChanged, nullptr, &status);
+	std::string name = MFnDependencyNode(node).name().asChar();
+	if (M_OK2)
+		addCallback(name + "meshTopoAttriCB", callbackId);
+	else
+		std::cout << "Failed to add meshChanged callback...\n";
+}
+
 void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 {
 	MFnMesh mesh(node, &status);
-	if (M_OK)
+	if (M_OK2)
 	{
-		const char* nodeName = mesh.name().asChar();
-
+		std::string nodeName = mesh.name().asChar();
+#if PRINT_EXTRA
+		printPlugPath(plug);
+#endif
 		if (std::string(plug.name().asChar()).find(".inMesh") != -1)
 		{
-			MPointArray mayaVerts;
-			status = mesh.getPoints(mayaVerts);
-			if (M_OK)
-			{
-				std::cout << "Mesh: " << mesh.name() << ", " << mayaVerts.length() << " vertices: ";
-
-				for (unsigned int i = 0; i < mayaVerts.length(); i++)
-					std::cout << "(" << mayaVerts[i].x << ", " << mayaVerts[i].y << ", " << mayaVerts[i].z << "), ";
-				std::cout << "\n";
-
-				MIntArray trianglesPerFace, indicies;
-				mesh.getTriangles(trianglesPerFace, indicies);
-
-				for (unsigned int i = 0; i < trianglesPerFace.length(); i++)
-					std::cout << trianglesPerFace[i] << ", ";
-				std::cout << "\n";
-
-				for (unsigned int i = 0; i < indicies.length(); i++)
-					std::cout << indicies[i] << ", ";
-				std::cout << "\n";
-
-				// Optimize
-				std::vector<Vertex> vertices(indicies.length());
-				for (unsigned int i = 0; i < indicies.length(); i++)
-				{
-					MPoint& currVertex = mayaVerts[indicies[i]];
-					vertices[i].position[0] = currVertex.x;
-					vertices[i].position[1] = currVertex.y;
-					vertices[i].position[2] = currVertex.z;
-				}
-
-				return;
-
-				const size_t SIZE = sizeof(MeshDataHeader); // + sizeof(verts);
-				void* data = malloc(SIZE);
-				
-				SectionHeader secHeader;
-				secHeader.header = NEW_MESH;
-				secHeader.nodeName = nodeName;
-				secHeader.messageLength = SIZE;
-				secHeader.messageID = 0;
-
-				producerBuffer->Send((char*)data, &secHeader);
-
-				free(data);
-			}
+			std::cout << "Sending mesh: " << nodeName << "\n";
+			removeCallback(nodeName + "DirtyPlug");
+#if SEND
+			if (!sendMesh(mesh, producerBuffer))
+				std::cout << "Failed sending mesh: " << nodeName <<"\n";
+#endif
 		}
 	}
 }
@@ -95,19 +103,20 @@ void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 void nodeAdded(MObject& node, void* clientData)
 {
 	MFnDependencyNode dgNode(node, &status);
-	if (M_OK)
+	if (M_OK2)
 	{
+		MCallbackId id;
 		std::string name = dgNode.name().asChar();
-
-		if (node.hasFn(MFn::kTransform))
-		{
-		}
 
 		if (node.hasFn(MFn::kMesh))
 		{
-			MCallbackId id = MNodeMessage::addNodeDirtyPlugCallback(node, meshDirtyPlug, nullptr, &status);
-			if (M_OK)
-				addCallback(name, id);
+			id = MNodeMessage::addNodeDirtyPlugCallback(node, meshDirtyPlug, nullptr, &status);
+			if (M_OK2)
+				addCallback(name + "DirtyPlug", id);
+
+			id = MPolyMessage::addPolyTopologyChangedCallback(node, meshTopoChanged, nullptr, &status);
+			if (M_OK2)
+				addCallback(name + "TopoChanged", id);
 		}
 	}
 }
@@ -133,7 +142,7 @@ EXPORT MStatus initializePlugin(MObject obj) {
 	MCallbackId callBackId;
 
 	callBackId = MDGMessage::addNodeAddedCallback(nodeAdded, "dependNode", NULL, &status);
-	if (M_OK)
+	if (M_OK2)
 		callbacks.insert({ "nodeCreationCB", callBackId });
 
 	producerBuffer = new Comlib(L"Filemap",150, ProcessType::Producer);

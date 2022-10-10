@@ -36,9 +36,8 @@ void MayaViewer::initialize()
 	cameraNode->rotateX(MATH_DEG_TO_RAD(0.f));
 
 	Node* lightNode = _scene->addNode("light");
-	Light* light = Light::createPoint(Vector3(0.5f, 0.5f, 0.5f), 20);
+	light = Light::createPoint(Vector3(0.5f, 0.5f, 0.5f), 20);
 	lightNode->setLight(light);
-	SAFE_RELEASE(light);
 	lightNode->translate(Vector3(0, 1, 5));
 
 	Mesh* mesh1 = createCubeMesh(5.0);
@@ -59,8 +58,8 @@ void MayaViewer::initialize()
 		mats[i]->getParameter("u_pointLightColor[0]")->setValue(lightNode->getLight()->getColor());
 		mats[i]->getParameter("u_pointLightPosition[0]")->bindValue(lightNode, &Node::getTranslationWorld);
 		mats[i]->getParameter("u_pointLightRangeInverse[0]")->bindValue(lightNode->getLight(), &Light::getRangeInverse);
-		samplers[i] = mats[i]->getParameter("u_diffuseTexture")->setValue("res/png/crate.png", true);
-		samplers[i]->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+		//samplers[i] = mats[i]->getParameter("u_diffuseTexture")->setValue("res/png/crate.png", true);
+		//samplers[i]->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
 		mats[i]->getStateBlock()->setCullFace(true);
 		mats[i]->getStateBlock()->setDepthTest(true);
 		mats[i]->getStateBlock()->setDepthWrite(true);
@@ -85,30 +84,21 @@ void MayaViewer::update(float elapsedTime)
 
 	while (consumerBuffer->Recieve(msg, mainHeader))
 	{
-		if (mainHeader->header == MESSAGE)
+		switch (mainHeader->header)
 		{
-			OutputDebugStringW(L"We got a message!\n");
+		default:
+			break;
 
-			MessageHeader msgHeader;
-			memcpy(&msgHeader, msg, sizeof(MessageHeader));
+		case NEW_MESH:
+		{
+			MeshInfoHeader meshInfo;
+            memcpy(&meshInfo, msg, sizeof(MeshInfoHeader));
 
-			Vector3 pos(msgHeader.position[0],msgHeader.position[1],msgHeader.position[2]);
-
-			size_t size = strlen(msgHeader.message) + 1;
-			wchar_t* str = new wchar_t[size]{};
-			mbstowcs(str, msgHeader.message, size);
-
-			std::wstring printMsg = 
-				L" - Position: " + 
-				std::to_wstring(pos.x) + L", " +
-				std::to_wstring(pos.y) + L", " +
-				std::to_wstring(pos.z) + L"\n";
-
-
-			OutputDebugStringW(str);
-			OutputDebugStringW(printMsg.c_str());
-
-			delete[]str;
+			if (!_scene->findNode(mainHeader->nodeName))
+				createNode(meshInfo, msg + sizeof(MeshInfoHeader), mainHeader->nodeName);
+			else
+				updateMesh(meshInfo, msg + sizeof(MeshInfoHeader), mainHeader->nodeName);
+		}
 		}
 	}
 
@@ -163,8 +153,98 @@ bool MayaViewer::drawScene(Node* node)
     return true;
 }
 
+void MayaViewer::setMatDefaults(Model* pModel)
+{
+	Material* pMat = pModel->setMaterial( "res/shaders/textured.vert", "res/shaders/textured.frag", "POINT_LIGHT_COUNT 1");
+	pMat->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
+	pMat->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
+	pMat->getParameter("u_pointLightColor[0]")->setValue(light->getColor());
+	pMat->getParameter("u_pointLightPosition[0]")->bindValue(light->getNode(), &Node::getTranslationWorld);
+	pMat->getParameter("u_pointLightRangeInverse[0]")->bindValue(light, &Light::getRangeInverse);
+	pMat->getStateBlock()->setCullFace(true);
+	pMat->getStateBlock()->setDepthTest(true);
+	pMat->getStateBlock()->setDepthWrite(true);
+
+    Texture::Sampler* pSampler = pMat->getParameter("u_diffuseTexture")->setValue("res/png/crate.png", true);
+    pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+}
+
+void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName)
+{
+	Mesh* pMesh = createMesh(header, msg + sizeof(MeshInfoHeader));
+	delete[] msg;
+	
+	if (!pMesh)
+	{
+		OutputDebugString(L"Failed to create mesh...\n");
+		return;
+	}
+	
+	Node* pNode = _scene->addNode(mainHeader->nodeName.cStr);
+
+	Model* pModel = Model::create(pMesh);
+	if (!pModel)
+	{
+		OutputDebugString(L"Failed to create model...\n");
+		return;
+	}
+
+	setMatDefaults(pModel);
+	
+	pNode->setDrawable(pModel);
+	SAFE_RELEASE(pMesh);
+	SAFE_RELEASE(pModel);
+}
+
+void MayaViewer::updateMesh(const MeshInfoHeader& header, void* pMeshData, const char* nodeName)
+{
+	Node* pNode = _scene->findNode(nodeName);
+	if (!pNode)
+	{
+		OutputDebugString(L"Couldn't find node...\n");
+		return;
+	}
+
+	Model* pModel = dynamic_cast<Model*>(pNode->getDrawable());
+	if (!pModel)
+	{
+		OutputDebugString(L"Couldn't get drawble...\n");
+		return;
+	}
+
+	Mesh* pMesh = pModel->getMesh();
+	if (!pMesh)
+	{
+		OutputDebugString(L"Couldn't get mesh...\n");
+		return;
+	}
+
+	pMesh = createMesh(header, pMeshData);
+	if (!pMesh)
+	{
+		OutputDebugString(L"Failed to update mesh...\n");
+		return;
+	}
+
+	pModel = Model::create(pMesh);
+	if (!pModel)
+	{
+		OutputDebugString(L"Failed to create model...\n");
+		return;
+	}
+
+	setMatDefaults(pModel);
+	pNode->setDrawable(pModel);
+
+	//pMesh->mapVertexBuffer();
+	//pMesh->unmapVertexBuffer();
+}
+
 void MayaViewer::keyEvent(Keyboard::KeyEvent evt, int key)
 {
+	if (key >= 256)
+		return;
+
     if (evt == Keyboard::KEY_PRESS)
     {
 		gKeys[key] = true;
@@ -261,5 +341,25 @@ Mesh* MayaViewer::createCubeMesh(float size)
 	mesh->setVertexData(vertices, 0, vertexCount);
 	MeshPart* meshPart = mesh->addPart(Mesh::TRIANGLES, Mesh::INDEX16, indexCount, false);
 	meshPart->setIndexData(indices, 0, indexCount);
+	return mesh;
+}
+
+Mesh* MayaViewer::createMesh(const MeshInfoHeader& info, void* data)
+{
+	VertexFormat::Element elements[] =
+	{
+		VertexFormat::Element(VertexFormat::POSITION, 3),
+		VertexFormat::Element(VertexFormat::TEXCOORD0, 2),
+		VertexFormat::Element(VertexFormat::NORMAL, 3)
+	};
+	Mesh* mesh = Mesh::createMesh(VertexFormat(elements, 3), info.numVertex, true);
+	if (mesh == NULL)
+	{
+		GP_ERROR("Failed to create mesh.");
+		return NULL;
+	}
+	mesh->setVertexData(data, 0, info.numVertex);
+	//MeshPart* meshPart = mesh->addPart(Mesh::TRIANGLES, Mesh::, indexCount, true);
+	//meshPart->setIndexData(indices, 0, indexCount);
 	return mesh;
 }

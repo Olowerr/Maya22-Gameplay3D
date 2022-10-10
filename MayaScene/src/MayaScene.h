@@ -60,22 +60,34 @@ protected:
     void render(float elapsedTime);
 
 private:
+    
+    Scene* _scene;
+    bool _wireframe;
+
+    // Message handling
+    Comlib* consumerBuffer;
+    char* msg;
+    SectionHeader* mainHeader;
 
     /**
      * Draws the scene each frame.
      */
     bool drawScene(Node* node);
 
-
+    // Helpers
+    Mesh* createMesh(const MeshInfoHeader& info, void* data);
 	Mesh* createCubeMesh(float size = 1.0f);
 	Material* createMaterial();
 
-    Scene* _scene;
-    bool _wireframe;
+    void setMatDefaults(Model* pModel);
+    void createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
+    void updateMesh(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
 
-    Comlib* consumerBuffer;
-    char* msg;
-    SectionHeader* mainHeader;
+
+
+    // temp
+    Light* light;
+
 };
 
 #endif

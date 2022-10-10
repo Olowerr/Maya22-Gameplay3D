@@ -197,6 +197,7 @@ xcopy ..\..\..\GamePlay-master\gameplay\res\ui res\ui\* /s /y /d</Command>
     <ClInclude Include="..\Memory\Headers.h" />
     <ClInclude Include="..\Memory\Memory.h" />
     <ClInclude Include="..\Memory\Mutex.h" />
+    <ClInclude Include="..\Memory\the stuff.h" />
     <ClInclude Include="src\MayaScene.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

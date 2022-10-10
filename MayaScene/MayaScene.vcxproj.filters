@@ -93,6 +93,9 @@
     <ClInclude Include="..\Memory\Mutex.h">
       <Filter>src\Memory</Filter>
     </ClInclude>
+    <ClInclude Include="..\Memory\the stuff.h">
+      <Filter>src\Memory</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\MayaScene.cpp">
