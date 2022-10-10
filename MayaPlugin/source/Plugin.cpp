@@ -33,37 +33,81 @@ void addCallbackDelOld(std::string& name, MCallbackId id)
 	callbacks[name] = id;
 }
 
+void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
+{
+	MFnMesh mesh(node, &status);
+	if (M_OK)
+	{
+		const char* nodeName = mesh.name().asChar();
+
+		if (std::string(plug.name().asChar()).find(".inMesh") != -1)
+		{
+			MPointArray mayaVerts;
+			status = mesh.getPoints(mayaVerts);
+			if (M_OK)
+			{
+				std::cout << "Mesh: " << mesh.name() << ", " << mayaVerts.length() << " vertices: ";
+
+				for (unsigned int i = 0; i < mayaVerts.length(); i++)
+					std::cout << "(" << mayaVerts[i].x << ", " << mayaVerts[i].y << ", " << mayaVerts[i].z << "), ";
+				std::cout << "\n";
+
+				MIntArray trianglesPerFace, indicies;
+				mesh.getTriangles(trianglesPerFace, indicies);
+
+				for (unsigned int i = 0; i < trianglesPerFace.length(); i++)
+					std::cout << trianglesPerFace[i] << ", ";
+				std::cout << "\n";
+
+				for (unsigned int i = 0; i < indicies.length(); i++)
+					std::cout << indicies[i] << ", ";
+				std::cout << "\n";
+
+				// Optimize
+				std::vector<Vertex> vertices(indicies.length());
+				for (unsigned int i = 0; i < indicies.length(); i++)
+				{
+					MPoint& currVertex = mayaVerts[indicies[i]];
+					vertices[i].position[0] = currVertex.x;
+					vertices[i].position[1] = currVertex.y;
+					vertices[i].position[2] = currVertex.z;
+				}
+
+				return;
+
+				const size_t SIZE = sizeof(MeshDataHeader); // + sizeof(verts);
+				void* data = malloc(SIZE);
+				
+				SectionHeader secHeader;
+				secHeader.header = NEW_MESH;
+				secHeader.nodeName = nodeName;
+				secHeader.messageLength = SIZE;
+				secHeader.messageID = 0;
+
+				producerBuffer->Send((char*)data, &secHeader);
+
+				free(data);
+			}
+		}
+	}
+}
+
 void nodeAdded(MObject& node, void* clientData)
 {
 	MFnDependencyNode dgNode(node, &status);
 	if (M_OK)
 	{
+		std::string name = dgNode.name().asChar();
+
 		if (node.hasFn(MFn::kTransform))
 		{
-			std::string name = dgNode.name(&status).asChar();	
+		}
 
-			std::cout << "Transform nodeeeeeeeeeee\n";
-			std::cout << name << "\n";
-
-			MessageHeader header{};
-			memcpy(header.message, name.c_str(), strlen(name.c_str()));
-			header.position[0] = 1.f;
-			header.position[1] = 2.f;
-			header.position[2] = 3.f;
-
-			size_t msgLength = sizeof(MessageHeader) + 1;
-			char* msg = new char[msgLength];
-			size_t offset = 0;
-
-			memcpy(msg + offset, &header, sizeof(MessageHeader));
-
-			SectionHeader secHeader;
-			secHeader.header = MESSAGE;
-			secHeader.messageLength = msgLength;
-			secHeader.messageID = 0;
-			producerBuffer->Send(msg, &secHeader);
-
-			delete[]msg;
+		if (node.hasFn(MFn::kMesh))
+		{
+			MCallbackId id = MNodeMessage::addNodeDirtyPlugCallback(node, meshDirtyPlug, nullptr, &status);
+			if (M_OK)
+				addCallback(name, id);
 		}
 	}
 }
