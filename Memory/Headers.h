@@ -7,7 +7,6 @@ enum Headers
 	MESSAGE,
 	NEW_MESH,
 	MESH_DATA,
-	NEW_TRANSFORM,
 	TRANSFORM_DATA
 };
 
@@ -45,9 +44,4 @@ struct TransformDataHeader
 {
 	char message[1024]{};
 	float transMtrx[4][4];
-};
-
-struct NewTransformHeader
-{
-	char message[1024]{};
 };
