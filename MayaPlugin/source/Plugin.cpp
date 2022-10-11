@@ -97,7 +97,7 @@ void meshAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug
 		}
 
 	}
-	else if (msg & MNodeMessage::AttributeMessage::kAttributeEval)
+	/*else if (msg & MNodeMessage::AttributeMessage::kAttributeEval)
 	{
 		MFnMesh mesh(plug.node(), &status);
 		if (M_FAIL2)
@@ -110,7 +110,7 @@ void meshAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug
 		{
 			std::cout << "OUT MESH\n";
 		}
-	}
+	}*/
 
 #if PRINT_EXTRA
 	std::cout << "\n";
@@ -183,6 +183,47 @@ void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 			if (!sendMesh(mesh, producerBuffer))
 				std::cout << nodeName << " | Failed creating mesh\n";
 #endif
+
+			/*MItMeshVertex it(node, &status);
+			if (M_FAIL2)
+				return;
+
+			MVector normal;
+			float2 uv;
+
+			std::cout <<"Num: "<< it.count() << "\n";
+			for (; !it.isDone(); it.next())
+			{
+				std::cout << it.index() << ":\n";
+
+				it.getNormal(normal);
+				it.getUV(uv);
+
+				printVector(it.position());
+				printVector(normal);
+				printVector(uv);
+				std::cout << "---\n";
+			}*/
+
+			/*MItMeshFaceVertex it2(node, &status);
+			if (M_FAIL2)
+				return;
+
+			MVector normal;
+			float2 uv;
+			int c = 0;
+			for (; !it2.isDone(); it2.next(), c++)
+			{
+				std::cout << it2.vertId() << ", " << it2.faceId() << ":\n";
+
+				it2.getNormal(normal);
+				it2.getUV(uv);
+
+				printVector(it2.position());
+				printVector(normal);
+				printVector(uv);
+				std::cout << "---\n";
+			}*/
 		}
 	}
 

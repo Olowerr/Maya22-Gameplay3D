@@ -190,3 +190,18 @@ inline void printMatrix(const MMatrix& matrix)
 	std::cout << "(" << values[2][0] << ", " << values[2][1] << ", " << values[2][2] << ", " << values[2][3] << "), ";
 	std::cout << "(" << values[3][0] << ", " << values[3][1] << ", " << values[3][2] << ", " << values[3][3] << ")]\n";
 }
+
+inline void printVector(const MPoint& vector)
+{
+	std::cout << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")\n";
+}
+
+inline void printVector(const MVector& vector)
+{
+	std::cout << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")\n";
+}
+
+inline void printVector(const float2& vector)
+{
+	std::cout << "(" << vector[0] << ", " << vector[1] << ")\n";
+}
