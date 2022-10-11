@@ -40,6 +40,7 @@ void removeCallback(const std::string& name)
 
 /*
 
+
 	Extrude initially works, but dragging while in extrude doesn't register.
 	It sends attributeChanged with msg kAttributeSet.
 	Currently meshAttribteChanged only checks kAttributeSet
@@ -63,6 +64,37 @@ void removeCallback(const std::string& name)
 	Fix so there aren't any problems when changing node names
 
 	------
+	 
+	USE MItMeshFaceVertex FOR VERTEX BUFFER 
+	USE mesh.getTriangleOffsets FOR INDEX BUFFER
+	WHEN DRAGGING VERT FIND AFFECTED VERTS BY LOOP THRO MIT AND SEARCH FOR vertId() == INDEX
+	SAVE I WHEN FOUND AND UPDATE VERTEX BUFFER WITH SAVED INDICIES
+	// COULD MAYBE JUST SEND THE NEW VERTEX DATA WHEN vertId() == PLUG INDEX RIGHT ?
+
+	USE MItMeshFaceVertex FOR VERTEX BUFFER 
+	USE mesh.getTriangleOffsets FOR INDEX BUFFER
+	WHEN DRAGGING VERT FIND AFFECTED VERTS BY LOOP THRO MIT AND SEARCH FOR vertId() == INDEX
+	SAVE I WHEN FOUND AND UPDATE VERTEX BUFFER WITH SAVED INDICIES
+	// COULD MAYBE JUST SEND THE NEW VERTEX DATA WHEN vertId() == PLUG INDEX RIGHT ?
+
+	USE MItMeshFaceVertex FOR VERTEX BUFFER 
+	USE mesh.getTriangleOffsets FOR INDEX BUFFER
+	WHEN DRAGGING VERT FIND AFFECTED VERTS BY LOOP THRO MIT AND SEARCH FOR vertId() == INDEX
+	SAVE I WHEN FOUND AND UPDATE VERTEX BUFFER WITH SAVED INDICIES
+	// COULD MAYBE JUST SEND THE NEW VERTEX DATA WHEN vertId() == PLUG INDEX RIGHT ?
+
+	USE MItMeshFaceVertex FOR VERTEX BUFFER 
+	USE mesh.getTriangleOffsets FOR INDEX BUFFER
+	WHEN DRAGGING VERT FIND AFFECTED VERTS BY LOOP THRO MIT AND SEARCH FOR vertId() == INDEX
+	SAVE I WHEN FOUND AND UPDATE VERTEX BUFFER WITH SAVED INDICIES
+	// COULD MAYBE JUST SEND THE NEW VERTEX DATA WHEN vertId() == PLUG INDEX RIGHT ?
+
+	USE MItMeshFaceVertex FOR VERTEX BUFFER 
+	USE mesh.getTriangleOffsets FOR INDEX BUFFER
+	WHEN DRAGGING VERT FIND AFFECTED VERTS BY LOOP THRO MIT AND SEARCH FOR vertId() == INDEX
+	SAVE I WHEN FOUND AND UPDATE VERTEX BUFFER WITH SAVED INDICIES
+	// COULD MAYBE JUST SEND THE NEW VERTEX DATA WHEN vertId() == PLUG INDEX RIGHT ?
+
 
 
 
@@ -223,7 +255,8 @@ void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 				printVector(normal);
 				printVector(uv);
 				std::cout << "---\n";
-			}*/
+			}
+			std::cout << "num: " << c << "\n";*/
 		}
 	}
 
