@@ -81,8 +81,8 @@ private:
 
     void setMatDefaults(Model* pModel);
     void createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
-    void updateMesh(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
-
+    void recreateMesh(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
+    void updateMesh(const MeshUpdateHeader& header, const char* nodeName);
 
 
     // temp

@@ -63,12 +63,35 @@
 // Commands
 #include <maya/MPxCommand.h>
 
+#pragma region
+#define PRINT_MSG_IND(msg, X) if (msg & MNodeMessage::AttributeMessage::X) std::cout << #X << ", "
+
+#define PRINT_MSG(msg)							\
+std::cout << "Messages: ";						\
+PRINT_MSG_IND(msg, kConnectionMade);			\
+PRINT_MSG_IND(msg, kConnectionBroken);			\
+PRINT_MSG_IND(msg, kAttributeEval);				\
+PRINT_MSG_IND(msg, kAttributeSet);				\
+PRINT_MSG_IND(msg, kAttributeLocked);			\
+PRINT_MSG_IND(msg, kAttributeUnlocked);			\
+PRINT_MSG_IND(msg, kAttributeAdded);			\
+PRINT_MSG_IND(msg, kAttributeRemoved);			\
+PRINT_MSG_IND(msg, kAttributeRenamed);			\
+PRINT_MSG_IND(msg, kAttributeKeyable);			\
+PRINT_MSG_IND(msg, kAttributeUnkeyable);		\
+PRINT_MSG_IND(msg, kIncomingDirection);			\
+PRINT_MSG_IND(msg, kAttributeArrayAdded);		\
+PRINT_MSG_IND(msg, kAttributeArrayRemoved);		\
+PRINT_MSG_IND(msg, kOtherPlugSet);				\
+PRINT_MSG_IND(msg, kLast);						\
+std::cout << " | "
 
 #define M_OK(X) X == MS::kSuccess
 #define M_OK2 status == MS::kSuccess
 
 #define M_FAIL(X) X != MS::kSuccess
 #define M_FAIL2 status != MS::kSuccess
+#pragma endregion Defines
 
 inline void printIntArray(const MIntArray& arr)
 {
@@ -121,32 +144,49 @@ inline void printNodePath(MObject& node)
 			std::cout << dag.name() << " has " << paths.length() << " path(s) ";
 			for (unsigned int i = 0; i < paths.length(); i++)
 				std::cout << i << ": " << paths[i].fullPathName() << " ";
-			std::cout << "\n\n";
+			std::cout << " | ";
 		}
 		else
-			std::cout << "No paths found for: " << dag.name() << "...\n\n";
+			std::cout << "No paths found for: " << dag.name() << "... | ";
 	}
 	else
-		std::cout << "Node was not a dag node...\n\n";
+		std::cout << "Node was not a dag node... | ";
 
 }
 
 inline void printPlugPath(MPlug& plug)
 {
-	if (plug.node().hasFn(MFn::kDagNode))
+	MString name = plug.name();
+
+	if (plug.node().hasFn(MFn::kDependencyNode))
 	{
-		MFnDagNode dag(plug.node());
-		MDagPathArray paths;
-		if (dag.getAllPaths(paths) == MS::kSuccess)
+		if (plug.node().hasFn(MFn::kDagNode))
 		{
-			std::cout << plug.name() << " has " << paths.length() << " path(s) ";
-			for (unsigned int i = 0; i < paths.length(); i++)
-				std::cout << i << ": " << paths[i].fullPathName() << " ";
-			std::cout << "\n";
+			MFnDagNode dag(plug.node());
+			MDagPathArray paths;
+			if (dag.getAllPaths(paths) == MS::kSuccess)
+			{
+				std::cout << name << " has " << paths.length() << " path(s) ";
+				for (unsigned int i = 0; i < paths.length(); i++)
+					std::cout << i << ": " << paths[i].fullPathName() << " ";
+				std::cout << " | ";
+			}
+			else
+				std::cout << "Failed to get paths for \"" << name << "\"... | ";
 		}
 		else
-			std::cout << "No paths found for: " << plug.name() << "...\n";
+			std::cout << "Plug: \"" << name <<"\" was not a dag node... | ";
 	}
 	else
-		std::cout << "Node was not a dag node...\n";
+		std::cout << "Plug: \"" << name <<"\" was not a dependency node... | ";
+}
+
+inline void printMatrix(const MMatrix& matrix)
+{
+	float values[4][4];
+	matrix.get(values);
+	std::cout << "[(" << values[0][0] << ", " << values[0][1] << ", " << values[0][2] << ", " << values[0][3] << "), ";
+	std::cout << "(" << values[1][0] << ", " << values[1][1] << ", " << values[1][2] << ", " << values[1][3] << "), ";
+	std::cout << "(" << values[2][0] << ", " << values[2][1] << ", " << values[2][2] << ", " << values[2][3] << "), ";
+	std::cout << "(" << values[3][0] << ", " << values[3][1] << ", " << values[3][2] << ", " << values[3][3] << ")]\n";
 }

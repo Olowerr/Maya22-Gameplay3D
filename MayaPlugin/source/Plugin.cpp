@@ -12,7 +12,8 @@ std::unordered_map<std::string, MCallbackId> callbacks;
 MStatus status = MS::kSuccess;
 
 #define PRINT_EXTRA 0
-#define SEND 1
+#define PRINT_SENDS 1
+#define SEND 0
 
 void addCallback(const std::string& name, MCallbackId id)
 {
@@ -21,7 +22,13 @@ void addCallback(const std::string& name, MCallbackId id)
 
 	callbacks[name] = id;
 }
-
+void addCallbackDelOld(const std::string& name, MCallbackId id)
+{
+	if (callbacks.count(name))
+		MMessage::removeCallback(callbacks[name]);
+	
+	callbacks[name] = id;
+}
 void removeCallback(const std::string& name)
 {
 	if (callbacks.find(name) == callbacks.end())
@@ -31,43 +38,120 @@ void removeCallback(const std::string& name)
 	callbacks.erase(name);
 }
 
+/*
+
+	Extrude initially works, but dragging while in extrude doesn't register.
+	It sends attributeChanged with msg kAttributeSet.
+	Currently meshAttribteChanged only checks kAttributeSet
+	and meshTopoAttributeChanged only checks kAttributeEval,
+	but removes the callback when outMesh is found
+
+	kAttributeEval in meshAttributeChanged is triggered too much with a .outMesh check,
+	atleast when a node is created (triggers twice).
+	Otherwise it seems fine (?) but Patrik said to use only kAttributeSet in meshAttributeChanged .-.
+
+	not removing the meshTopoAttributeChanged callback creates duplicates.
+
+	maybe meshAttribteChanged-Eval can check if extrude is active ?
+
+	------
+
+	Dragging a vertex currently sends the whole mesh.. Need to send only the affected vertices
+
+	------
+	
+	Fix so there aren't any problems when changing node names
+
+	------
+
+
+
+*/
+
+void meshAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* clientData)
+{
+#if PRINT_EXTRA
+	std::cout << "MESH ATTRI | ";
+	PRINT_MSG(msg);
+	printPlugPath(plug);
+	printPlugPath(otherPlug);
+#endif
+	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
+	{
+		MFnMesh mesh(plug.node(), &status);
+		if (M_FAIL2)
+			return;
+
+		std::string nodeName = mesh.name().asChar();
+		std::string plugName = plug.name().asChar();
+		
+		if (plugName.find(".pnts[") != -1)
+		{
+#if PRINT_SENDS
+			std::cout << nodeName << " | Updating mesh attribute\n";
+#endif
+#if SEND
+			if (!sendUpdateMesh(plug.logicalIndex(), mesh, producerBuffer))
+				std::cout << nodeName << " | Failed updating mesh attribute\n";
+#endif
+		}
+
+	}
+	else if (msg & MNodeMessage::AttributeMessage::kAttributeEval)
+	{
+		MFnMesh mesh(plug.node(), &status);
+		if (M_FAIL2)
+			return;
+
+		std::string nodeName = mesh.name().asChar();
+		std::string plugName = plug.name().asChar();
+
+		if (plugName.find(".outMesh") != -1)
+		{
+			std::cout << "OUT MESH\n";
+		}
+	}
+
+#if PRINT_EXTRA
+	std::cout << "\n";
+#endif
+}
+
 void meshTopoAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* clientData)
 {
+#if PRINT_EXTRA
+	std::cout << "TOPO ATTRI | ";
+	PRINT_MSG(msg);
+	printPlugPath(plug);
+	printPlugPath(otherPlug);
+#endif
+
 	if (msg & MNodeMessage::AttributeMessage::kAttributeEval)
 	{
 		MFnMesh mesh(plug.node(), &status);
 		std::string nodeName = mesh.name().asChar();
 		std::string plugName = plug.name().asChar();
-#if PRINT_EXTRA
-		printPlugPath(plug);
-#endif
+
 		if (M_OK2)
 		{
 			if (plugName.find(".outMesh") != -1)
 			{
-				std::cout << "Updating mesh: " << nodeName << "\n";
-				removeCallback(nodeName + "meshTopoAttriCB");			
+				removeCallback(nodeName + "meshTopoAttriCB");
+#if PRINT_SENDS
+				std::cout << nodeName << " | Updating mesh topology\n";
+#endif
 #if SEND
 				if (!sendMesh(mesh, producerBuffer))
-					std::cout << "Failed updating mesh: " << nodeName <<"\n";
+					std::cout << nodeName << " | Failed updating mesh topology\n";
 #endif
 			}
 		}
 	}
-}
 
-/*
-	EXTRUDE NOT WORKING PLS FIX MAN
-	EXTRUDE NOT WORKING PLS FIX MAN
-	EXTRUDE NOT WORKING PLS FIX MAN
-	EXTRUDE NOT WORKING PLS FIX MAN
-	EXTRUDE NOT WORKING PLS FIX MAN
-	EXTRUDE NOT WORKING PLS FIX MAN
-	EXTRUDE NOT WORKING PLS FIX MAN
-	EXTRUDE NOT WORKING PLS FIX MAN
-	EXTRUDE NOT WORKING PLS FIX MAN
-	EXTRUDE NOT WORKING PLS FIX MAN
-*/
+#if PRINT_EXTRA
+	std::cout << "\n";
+#endif
+}
 
 void meshTopoChanged(MObject& node, void* clientData)
 {
@@ -75,29 +159,36 @@ void meshTopoChanged(MObject& node, void* clientData)
 	std::string name = MFnDependencyNode(node).name().asChar();
 	if (M_OK2)
 		addCallback(name + "meshTopoAttriCB", callbackId);
-	else
-		std::cout << "Failed to add meshChanged callback...\n";
 }
 
 void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 {
+#if PRINT_EXTRA
+	std::cout << "MESH DIRTY | ";
+	printPlugPath(plug);
+#endif
+
 	MFnMesh mesh(node, &status);
 	if (M_OK2)
 	{
 		std::string nodeName = mesh.name().asChar();
-#if PRINT_EXTRA
-		printPlugPath(plug);
-#endif
+
 		if (std::string(plug.name().asChar()).find(".inMesh") != -1)
 		{
-			std::cout << "Sending mesh: " << nodeName << "\n";
 			removeCallback(nodeName + "DirtyPlug");
+#if PRINT_SENDS
+			std::cout << nodeName << " | Sending mesh\n";
+#endif
 #if SEND
 			if (!sendMesh(mesh, producerBuffer))
-				std::cout << "Failed sending mesh: " << nodeName <<"\n";
+				std::cout << nodeName << " | Failed creating mesh\n";
 #endif
 		}
 	}
+
+#if PRINT_EXTRA
+	std::cout << "\n";
+#endif
 }
 
 void nodeAdded(MObject& node, void* clientData)
@@ -117,6 +208,10 @@ void nodeAdded(MObject& node, void* clientData)
 			id = MPolyMessage::addPolyTopologyChangedCallback(node, meshTopoChanged, nullptr, &status);
 			if (M_OK2)
 				addCallback(name + "TopoChanged", id);
+
+			id = MNodeMessage::addAttributeChangedCallback(node, meshAttributeChanged, nullptr, &status);
+			if (M_OK2)
+				addCallback(name + "AttriChanged", id);
 		}
 	}
 }

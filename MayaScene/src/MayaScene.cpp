@@ -36,7 +36,7 @@ void MayaViewer::initialize()
 	cameraNode->rotateX(MATH_DEG_TO_RAD(0.f));
 
 	Node* lightNode = _scene->addNode("light");
-	light = Light::createPoint(Vector3(0.5f, 0.5f, 0.5f), 20);
+	light = Light::createPoint(Vector3(1.f, 1.0f, 1.0f), 50);
 	lightNode->setLight(light);
 	lightNode->translate(Vector3(0, 1, 5));
 
@@ -89,7 +89,7 @@ void MayaViewer::update(float elapsedTime)
 		default:
 			break;
 
-		case NEW_MESH:
+		case MESH_NEW:
 		{
 			MeshInfoHeader meshInfo;
             memcpy(&meshInfo, msg, sizeof(MeshInfoHeader));
@@ -97,7 +97,21 @@ void MayaViewer::update(float elapsedTime)
 			if (!_scene->findNode(mainHeader->nodeName))
 				createNode(meshInfo, msg + sizeof(MeshInfoHeader), mainHeader->nodeName);
 			else
-				updateMesh(meshInfo, msg + sizeof(MeshInfoHeader), mainHeader->nodeName);
+				recreateMesh(meshInfo, msg + sizeof(MeshInfoHeader), mainHeader->nodeName);
+
+			break;
+		}
+		case MESH_UPDATE:
+		{
+			MeshUpdateHeader header;
+			memcpy(&header, msg, sizeof(MeshUpdateHeader));
+
+			if (_scene->findNode(mainHeader->nodeName))
+				updateMesh(header, mainHeader->nodeName);
+			else
+				OutputDebugString(L"Could not find node...\n");
+
+			break;
 		}
 		}
 	}
@@ -158,6 +172,7 @@ void MayaViewer::setMatDefaults(Model* pModel)
 	Material* pMat = pModel->setMaterial( "res/shaders/textured.vert", "res/shaders/textured.frag", "POINT_LIGHT_COUNT 1");
 	pMat->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
 	pMat->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
+	pMat->getParameter("u_ambientColor")->setValue(Vector3(0.2f, 0.2f, 0.2f));
 	pMat->getParameter("u_pointLightColor[0]")->setValue(light->getColor());
 	pMat->getParameter("u_pointLightPosition[0]")->bindValue(light->getNode(), &Node::getTranslationWorld);
 	pMat->getParameter("u_pointLightRangeInverse[0]")->bindValue(light, &Light::getRangeInverse);
@@ -196,7 +211,7 @@ void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const
 	SAFE_RELEASE(pModel);
 }
 
-void MayaViewer::updateMesh(const MeshInfoHeader& header, void* pMeshData, const char* nodeName)
+void MayaViewer::recreateMesh(const MeshInfoHeader& header, void* pMeshData, const char* nodeName)
 {
 	Node* pNode = _scene->findNode(nodeName);
 	if (!pNode)
@@ -238,6 +253,34 @@ void MayaViewer::updateMesh(const MeshInfoHeader& header, void* pMeshData, const
 
 	//pMesh->mapVertexBuffer();
 	//pMesh->unmapVertexBuffer();
+}
+
+void MayaViewer::updateMesh(const MeshUpdateHeader& header, const char* nodeName)
+{
+	Node* pNode = _scene->findNode(nodeName);
+	if (!pNode)
+	{
+		OutputDebugString(L"Couldn't find node...\n");
+		return;
+	}
+
+	Model* pModel = dynamic_cast<Model*>(pNode->getDrawable());
+	if (!pModel)
+	{
+		OutputDebugString(L"Couldn't get drawble...\n");
+		return;
+	}
+
+	Mesh* pMesh = pModel->getMesh();
+	if (!pMesh)
+	{
+		OutputDebugString(L"Couldn't get mesh...\n");
+		return;
+	}
+
+	Vertex* pData = (Vertex*)pMesh->mapVertexBuffer();
+	pData[header.vertexIndex] = header.newVertex;
+	pMesh->unmapVertexBuffer();
 }
 
 void MayaViewer::keyEvent(Keyboard::KeyEvent evt, int key)

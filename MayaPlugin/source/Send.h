@@ -70,7 +70,7 @@ inline bool sendMesh(const MFnMesh& mesh, Comlib* pComlib)
 	memcpy((char*)pData + sizeof(MeshInfoHeader), vertices.data(), SIZE - sizeof(MeshInfoHeader));
 
 	SectionHeader secHeader;
-	secHeader.header = NEW_MESH;
+	secHeader.header = MESH_NEW;
 	secHeader.nodeName = nodeName;
 	secHeader.messageLength = SIZE;
 	secHeader.messageID = 0;
@@ -81,5 +81,85 @@ inline bool sendMesh(const MFnMesh& mesh, Comlib* pComlib)
 	free(pData);
 
 	return true;
+}
+
+bool sendUpdateMesh(unsigned int index, const MFnMesh& mesh, Comlib* pComlib)
+{
+	// temp
+	return sendMesh(mesh, pComlib);
+
+	MStatus status;
+	const char* nodeName = mesh.name(&status).asChar();
+	if (M_FAIL(status))
+		return false;
+
+	// first ---
+	MPoint position;
+	status = mesh.getPoint(index, position);
+	if (M_FAIL(status))
+		return false;
+	
+	MVector normal;
+	status = mesh.getVertexNormal(index, false, normal);
+	if (M_FAIL(status))
+		return false;
+	// --- first
+
+
+
+	// second ---
+	/*
+		find and save i (in indien) when searching through vertexIds for index
+		go through indien and match elements to indicies
+
+		matching values should indicate that vertex[i] needs to be updated in gameplay3d
+		right?
+	*/
+
+	MIntArray indien;
+	MIntArray xTrianglesPerFace, indicies, xVertexPerFace, vertexIds;
+	mesh.getTriangleOffsets(xTrianglesPerFace, indicies);
+	mesh.getVertices(xVertexPerFace, vertexIds);
+	
+	for (unsigned int i = 0; i < vertexIds.length(); i++)
+	{
+		if (vertexIds[i] == index)
+			indien.append(i);
+	}
+	// --- second
+
+	MeshUpdateHeader header;
+	header.vertexIndex = index;
+	
+	header.newVertex.position[0] = position.x;
+	header.newVertex.position[1] = position.y;
+	header.newVertex.position[2] = position.z;
+
+	header.newVertex.uv[0] = 0.f; // temp
+	header.newVertex.uv[1] = 0.f; // temp
+
+	header.newVertex.normal[0] = normal.x;
+	header.newVertex.normal[1] = normal.y;
+	header.newVertex.normal[2] = normal.z;
+	
+	SectionHeader secHeader;
+	secHeader.header = MESH_UPDATE;
+	secHeader.nodeName = nodeName;
+	secHeader.messageLength = sizeof(MeshUpdateHeader);
+	secHeader.messageID = 0;
+
+	pComlib->Send((char*)&header, &secHeader);
+
+	return true;
+
+
+	//std::cout << "Indicies:\n";
+	//printIntArray(indicies);
+	//std::cout << "\nPoints:\n";
+	//printFloatArray(points);
+	//printIntArray(vertexIds);
+	//std::cout <<"\nNormals:\n";
+	//printFloatArray(normals);
+	//printIntArray(normalIds);
 
 }

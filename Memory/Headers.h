@@ -6,8 +6,8 @@ constexpr size_t MB = 1048576;
 enum Headers 
 {
 	MESSAGE,
-	NEW_MESH,
-	MESH_DATA
+	MESH_NEW,
+	MESH_UPDATE
 };
 
 struct Vertex
@@ -31,4 +31,10 @@ struct MeshInfoHeader
 {
 	unsigned int numVertex;
 	//unsigned int numIndex;
+};
+
+struct MeshUpdateHeader
+{
+	unsigned int vertexIndex;
+	Vertex newVertex;
 };
