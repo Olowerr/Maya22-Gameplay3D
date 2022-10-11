@@ -110,6 +110,52 @@ void MayaViewer::update(float elapsedTime)
 
 			delete[]str;
 		}
+
+		if (mainHeader->header == NEW_TRANSFORM)
+		{
+			OutputDebugStringW(L"We got a transformation matrix\n");
+
+			TransformDataHeader transHeader;
+			memcpy(&transHeader, msg, sizeof(TransformDataHeader));
+
+			Matrix mtrx = Matrix(*transHeader.transMtrx);
+			Vector3* translate = new Vector3;
+			Vector3* scale = new Vector3;
+			Quaternion* rotation = new Quaternion;
+			mtrx.decompose(scale, rotation, translate);
+
+			Matrix* rotMtrx = new Matrix;
+			Matrix::createRotation(*rotation, rotMtrx);
+
+			size_t sizeTrans = strlen(transHeader.message) + 1;
+			wchar_t* transStr = new wchar_t[sizeTrans] {};
+			mbstowcs(transStr, transHeader.message, sizeTrans);
+
+			std::wstring printThis =
+				L" - Translate: " +
+				std::to_wstring(translate->x) + L", " +
+				std::to_wstring(translate->y) + L", " +
+				std::to_wstring(translate->z) + L"\n";
+
+			std::wstring printMe =
+				L" - Scale: " +
+				std::to_wstring(scale->x) + L", " +
+				std::to_wstring(scale->y) + L", " +
+				std::to_wstring(scale->z) + L"\n";
+
+			std::wstring printDat =
+				L" - Rotate: " +
+				std::to_wstring(rotation->x) + L", " +
+				std::to_wstring(rotation->y) + L", " +
+				std::to_wstring(rotation->z) + L"\n";
+
+			OutputDebugStringW(transStr);
+			OutputDebugStringW(printThis.c_str());
+			OutputDebugStringW(printMe.c_str());
+			OutputDebugStringW(printDat.c_str());
+
+			delete[]transStr;
+		}
 	}
 
 

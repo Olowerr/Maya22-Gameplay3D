@@ -64,6 +64,30 @@ void nodeAdded(MObject& node, void* clientData)
 			producerBuffer->Send(msg, &secHeader);
 
 			delete[]msg;
+
+			TransformDataHeader transHeader{};
+			memcpy(transHeader.message, name.c_str(), strlen(name.c_str()));
+
+			MFnTransform transform(node);
+			transform.transformationMatrix().get(transHeader.transMtrx);
+			//std::cout << "[(" << transHeader.transMtrx[0][0] << ", " << transHeader.transMtrx[0][1] << ", " << transHeader.transMtrx[0][2] << ", " << transHeader.transMtrx[0][3] << "), ";
+			//std::cout << "(" << transHeader.transMtrx[1][0] << ", " << transHeader.transMtrx[1][1] << ", " << transHeader.transMtrx[1][2] << ", " << transHeader.transMtrx[1][3] << "), ";
+			//std::cout << "(" << transHeader.transMtrx[2][0] << ", " << transHeader.transMtrx[2][1] << ", " << transHeader.transMtrx[2][2] << ", " << transHeader.transMtrx[2][3] << "), ";
+			//std::cout << "(" << transHeader.transMtrx[3][0] << ", " << transHeader.transMtrx[3][1] << ", " << transHeader.transMtrx[3][2] << ", " << transHeader.transMtrx[3][3] << ")]\n";
+
+			size_t anotherMsgLength = sizeof(TransformDataHeader) + 1;
+			char* anotherMsg = new char[anotherMsgLength];
+			size_t anotherOffset = 0;
+
+			memcpy(anotherMsg + anotherOffset, &transHeader, sizeof(TransformDataHeader));
+
+			SectionHeader anotherSecHeader;
+			anotherSecHeader.header = NEW_TRANSFORM;
+			anotherSecHeader.messageLength = anotherMsgLength;
+			anotherSecHeader.messageID = 0;
+			producerBuffer->Send(anotherMsg, &anotherSecHeader);
+
+			delete[]anotherMsg;
 		}
 	}
 }
