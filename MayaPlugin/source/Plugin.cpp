@@ -20,7 +20,7 @@ void addCallback(const std::string& name, MCallbackId id)
 	std::string tempName = name;
 	
 	if (callbacks.count(name))
-		tempName += i;
+		tempName += i++;
 
 	callbacks[tempName] = id;
 }
@@ -183,6 +183,37 @@ void meshTopoAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 #endif
 }
 
+void shapeAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* x)
+{
+	if (msg & MNodeMessage::kConnectionMade)
+	{
+		if (otherPlug.node().hasFn(MFn::kShadingEngine))
+		{
+			MFnDependencyNode material(otherPlug.node());
+			std::cout << material.name() << std::endl;
+
+			MPlugArray connections;
+			MPlug shaderPlug = material.findPlug("surfaceShader", false);
+			shaderPlug.connectedTo(connections, true, false);
+
+			for (size_t i = 0; i < connections.length(); i++)
+			{
+				MObject connection(connections[i].node());
+				if (connection.hasFn(MFn::kLambert))
+				{
+					MFnLambertShader tempLamb(connection);
+					std::cout << "Lambert material name: " << tempLamb.name() << std::endl;
+					tempLamb.hasAttribute("Color", &status);
+					if (M_OK2)
+					{
+						std::cout << tempLamb.color() << std::endl;
+					}
+				}
+			}
+		}
+	}
+}
+
 void meshTopoChanged(MObject& node, void* clientData)
 {
 	MCallbackId callbackId = MNodeMessage::addAttributeChangedCallback(node, meshTopoAttributeChanged, nullptr, &status);
@@ -295,13 +326,17 @@ void nodeAdded(MObject& node, void* clientData)
 			id = MNodeMessage::addAttributeChangedCallback(node, meshAttributeChanged, nullptr, &status);
 			if (M_OK2)
 				addCallback(name + "AttriChanged", id);
+
+			id = MNodeMessage::addAttributeChangedCallback(node, shapeAttributeChanged, NULL, &status);
+			if (M_OK2)
+				addCallback(name + "Material changed", id);
 		}
 
 		if (node.hasFn(MFn::kTransform))
 		{
 			id = MNodeMessage::addAttributeChangedCallback(node, transformAttributeChanged, NULL, &status);
-			if (status == MS::kSuccess)
-				addCallback(name + "tranformChanged", id);
+			if (M_OK2)
+				addCallback(name + "TranformChanged", id);
 		}
 	}
 }
