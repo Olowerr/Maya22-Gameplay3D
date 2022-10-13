@@ -25,7 +25,7 @@ struct SectionHeader
 	size_t messageID;
 
 	// Will always be used right?
-	CharString nodeName;
+	CharString name;
 };
 
 struct MeshInfoHeader
@@ -40,13 +40,7 @@ struct MeshUpdateHeader
 	Vertex newVertex;
 };
 
-struct NewMeshHeader
-{
-	char message[1024]{};
-};
-
 struct TransformDataHeader
 {
-	char message[1024]{};
 	float transMtrx[4][4];
 };

@@ -4,12 +4,23 @@
 #include "Comlib.h"
 
 
-inline bool sendMesh(const MFnMesh& mesh, Comlib* pComlib)
+inline bool sendMesh(const MObject& node, Comlib* pComlib)
 {
 	MStatus status;
-	const char* nodeName = mesh.name(&status).asChar();
+
+	MFnMesh mesh(node, &status);
 	if (M_FAIL(status))
 		return false;
+	
+	MFnDagNode dag(mesh.parent(0), &status);
+	if (M_FAIL(status))
+		return false;
+
+	const char* nodeName = dag.name(&status).asChar();
+	if (M_FAIL(status))
+		return false;
+
+
 
 	// Indices
 	MIntArray xTrianglesPerFace, indicies;
@@ -71,7 +82,7 @@ inline bool sendMesh(const MFnMesh& mesh, Comlib* pComlib)
 
 	SectionHeader secHeader;
 	secHeader.header = MESH_NEW;
-	secHeader.nodeName = nodeName;
+	secHeader.name = nodeName;
 	secHeader.messageLength = SIZE;
 	secHeader.messageID = 0;
 
@@ -83,12 +94,16 @@ inline bool sendMesh(const MFnMesh& mesh, Comlib* pComlib)
 	return true;
 }
 
-bool sendUpdateMesh(unsigned int index, const MFnMesh& mesh, Comlib* pComlib)
+inline bool sendUpdateMesh(unsigned int index, const MObject& node, Comlib* pComlib)
 {
-	// temp
-	return sendMesh(mesh, pComlib);
-
 	MStatus status;
+
+	// temp
+	return sendMesh(node, pComlib);
+
+	MFnMesh mesh(node, &status);
+	return false;
+
 	const char* nodeName = mesh.name(&status).asChar();
 	if (M_FAIL(status))
 		return false;
@@ -144,7 +159,7 @@ bool sendUpdateMesh(unsigned int index, const MFnMesh& mesh, Comlib* pComlib)
 	
 	SectionHeader secHeader;
 	secHeader.header = MESH_UPDATE;
-	secHeader.nodeName = nodeName;
+	secHeader.name= nodeName;
 	secHeader.messageLength = sizeof(MeshUpdateHeader);
 	secHeader.messageID = 0;
 
@@ -162,4 +177,47 @@ bool sendUpdateMesh(unsigned int index, const MFnMesh& mesh, Comlib* pComlib)
 	//printFloatArray(normals);
 	//printIntArray(normalIds);
 
+}
+
+inline bool SendTransformData(const MObject& obj, Comlib* pComlib)
+{
+	MStatus status;
+	MFnTransform trans(obj, &status);
+	if (status == MS::kSuccess)
+	{
+		MFnDagNode dag(obj);
+		//cout << trans.name() << " new translation: " << trans.getTranslation(MSpace::kObject, &status) << endl;
+		//cout << trans.name() << " new transformation Matrix: " << trans.transformationMatrix() << endl;
+
+		std::string name = dag.name(&status).asChar();
+
+		TransformDataHeader transHeader{};
+		trans.transformationMatrix().get(transHeader.transMtrx);
+
+		size_t transMsgLen = sizeof(TransformDataHeader) + 1;
+		char* msg = new char[transMsgLen];
+		size_t offset = 0;
+
+		memcpy(msg + offset, &transHeader, sizeof(TransformDataHeader));
+
+		SectionHeader secHeader;
+		secHeader.name = name;
+		secHeader.header = TRANSFORM_DATA;
+		secHeader.messageLength = transMsgLen;
+		secHeader.messageID = 0;
+		pComlib->Send(msg, &secHeader);
+
+		delete[]msg;
+		for (size_t i = 0; i < dag.childCount(); i++)
+		{
+			if (!dag.child(i).isNull())
+			{
+				SendTransformData(dag.child(i), pComlib);
+			}
+		}
+
+		return true;
+	}
+
+	return false;
 }

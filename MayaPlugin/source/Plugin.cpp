@@ -13,7 +13,6 @@ MStatus status = MS::kSuccess;
 
 #define PRINT_EXTRA 0
 #define PRINT_SENDS 1
-#define SEND 0
 
 void addCallback(const std::string& name, MCallbackId id)
 {
@@ -125,10 +124,8 @@ void meshAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug
 #if PRINT_SENDS
 			std::cout << nodeName << " | Updating mesh attribute\n";
 #endif
-#if SEND
-			if (!sendUpdateMesh(plug.logicalIndex(), mesh, producerBuffer))
+			if (!sendUpdateMesh(plug.logicalIndex(), plug.node(), producerBuffer))
 				std::cout << nodeName << " | Failed updating mesh attribute\n";
-#endif
 		}
 
 	}
@@ -173,12 +170,10 @@ void meshTopoAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 			{
 				removeCallback(nodeName + "meshTopoAttriCB");
 #if PRINT_SENDS
-				std::cout << nodeName << " | Updating mesh topology\n";
+				std::cout << nodeName << " | Updating mesh topology...\n";
 #endif
-#if SEND
-				if (!sendMesh(mesh, producerBuffer))
-					std::cout << nodeName << " | Failed updating mesh topology\n";
-#endif
+				if (!sendMesh(plug.node(), producerBuffer))
+					std::cout << nodeName << " | Failed updating mesh topology...\n";
 			}
 		}
 	}
@@ -214,10 +209,9 @@ void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 #if PRINT_SENDS
 			std::cout << nodeName << " | Sending mesh\n";
 #endif
-#if SEND
-			if (!sendMesh(mesh, producerBuffer))
-				std::cout << nodeName << " | Failed creating mesh\n";
-#endif
+
+			if (!sendMesh(node, producerBuffer))
+				std::cout << nodeName << " | Failed creating mesh...\n";
 
 			/*MItMeshVertex it(node, &status);
 			if (M_FAIL2)
@@ -268,53 +262,14 @@ void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 #endif
 }
 
-void SendTransformData(MObject obj)
-{
-	MFnTransform trans(obj, &status);
-	if (status == MS::kSuccess)
-	{
-		MFnDagNode dag(obj);
-		cout << trans.name() << " new translation: " << trans.getTranslation(MSpace::kObject, &status) << endl;
-		cout << trans.name() << " new transformation Matrix: " << trans.transformationMatrix() << endl;
-
-		std::string name = dag.name(&status).asChar();
-
-		TransformDataHeader transHeader{};
-		memcpy(transHeader.message, name.c_str(), strlen(name.c_str()));
-
-		trans.transformationMatrix().get(transHeader.transMtrx);
-
-		size_t transMsgLen = sizeof(TransformDataHeader) + 1;
-		char* msg = new char[transMsgLen];
-		size_t offset = 0;
-
-		memcpy(msg + offset, &transHeader, sizeof(TransformDataHeader));
-
-		SectionHeader secHeader;
-		secHeader.header = TRANSFORM_DATA;
-		secHeader.messageLength = transMsgLen;
-		secHeader.messageID = 0;
-		producerBuffer->Send(msg, &secHeader);
-
-		delete[]msg;
-		for (size_t i = 0; i < dag.childCount(); i++)
-		{
-			if (!dag.child(i).isNull())
-			{
-				SendTransformData(dag.child(i));
-			}
-		}
-	}
-}
-
-void nodeAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* x)
+void transformAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* x)
 {
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
 	{
 		MObject obj(plug.node());
 		if (obj.hasFn(MFn::kTransform))
 		{
-			SendTransformData(obj);
+			SendTransformData(obj, producerBuffer);
 		}
 	}
 }
@@ -340,63 +295,13 @@ void nodeAdded(MObject& node, void* clientData)
 			id = MNodeMessage::addAttributeChangedCallback(node, meshAttributeChanged, nullptr, &status);
 			if (M_OK2)
 				addCallback(name + "AttriChanged", id);
-			
-			// Transform
-			MessageHeader header{};
-			memcpy(header.message, name.c_str(), strlen(name.c_str()));
-			header.position[0] = 1.f;
-			header.position[1] = 2.f;
-			header.position[2] = 3.f;
+		}
 
-			size_t msgLength = sizeof(MessageHeader) + 1;
-			char* msg = new char[msgLength];
-			size_t offset = 0;
-
-			memcpy(msg + offset, &header, sizeof(MessageHeader));
-
-			SectionHeader secHeader;
-			secHeader.header = MESSAGE;
-			secHeader.messageLength = msgLength;
-			secHeader.messageID = 0;
-			producerBuffer->Send(msg, &secHeader);
-
-			delete[]msg;
-
-			TransformDataHeader transHeader{};
-			memcpy(transHeader.message, name.c_str(), strlen(name.c_str()));
-
-			MFnTransform transform(node);
-			transform.transformationMatrix().get(transHeader.transMtrx);
-
-			size_t transMsgLen = sizeof(TransformDataHeader) + 1;
-			msg = new char[transMsgLen];
-
-			memcpy(msg + offset, &transHeader, sizeof(TransformDataHeader));
-
-			secHeader.header = TRANSFORM_DATA;
-			secHeader.messageLength = transMsgLen;
-			secHeader.messageID = 0;
-			producerBuffer->Send(msg, &secHeader);
-
-			delete[]msg;
-
-			MCallbackId transformID = MNodeMessage::addAttributeChangedCallback(node, nodeAttributeChanged, NULL, &status);
+		if (node.hasFn(MFn::kTransform))
+		{
+			id = MNodeMessage::addAttributeChangedCallback(node, transformAttributeChanged, NULL, &status);
 			if (status == MS::kSuccess)
-			{
-				std::string extra = "transformChanged";
-				auto iterator = callbacks.find(name + extra);
-				if (iterator != callbacks.end())
-				{
-					cout << "Callback erased: " << iterator->first << endl;
-					MMessage::removeCallback(iterator->second);
-					callbacks.erase(iterator);
-				}
-				callbacks.insert({ name + extra, transformID });
-			}
-			else
-			{
-				cout << "Something went wrong when added callbacks to a node: " << name << endl;
-			}
+				addCallback(name + "tranformChanged", id);
 		}
 	}
 }

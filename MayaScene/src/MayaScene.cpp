@@ -94,10 +94,10 @@ void MayaViewer::update(float elapsedTime)
 			MeshInfoHeader meshInfo;
             memcpy(&meshInfo, msg, sizeof(MeshInfoHeader));
 
-			if (!_scene->findNode(mainHeader->nodeName))
-				createNode(meshInfo, msg + sizeof(MeshInfoHeader), mainHeader->nodeName);
+			if (!_scene->findNode(mainHeader->name))
+				createNode(meshInfo, msg + sizeof(MeshInfoHeader), mainHeader->name);
 			else
-				recreateMesh(meshInfo, msg + sizeof(MeshInfoHeader), mainHeader->nodeName);
+				recreateMesh(meshInfo, msg + sizeof(MeshInfoHeader), mainHeader->name);
 
 			break;
 		}
@@ -106,18 +106,23 @@ void MayaViewer::update(float elapsedTime)
 			MeshUpdateHeader header;
 			memcpy(&header, msg, sizeof(MeshUpdateHeader));
 
-			if (_scene->findNode(mainHeader->nodeName))
-				updateMesh(header, mainHeader->nodeName);
+			if (_scene->findNode(mainHeader->name))
+				updateMesh(header, mainHeader->name);
 			else
 				OutputDebugString(L"Could not find node...\n");
 
 			break;
 		}
-		}
-
-		if (mainHeader->header == TRANSFORM_DATA)
+		case TRANSFORM_DATA:
 		{
-			OutputDebugStringW(L"We got a transformation matrix\n");
+			//OutputDebugStringW(L"We got a transformation matrix\n");
+
+			Node* pNode = _scene->findNode(mainHeader->name);
+			if (!pNode)
+			{
+				OutputDebugString(L"Could not find node...\n");
+				break;
+			}
 
 			TransformDataHeader transHeader;
 			memcpy(&transHeader, msg, sizeof(TransformDataHeader));
@@ -131,9 +136,18 @@ void MayaViewer::update(float elapsedTime)
 			Matrix* rotMtrx = new Matrix;
 			Matrix::createRotation(*rotation, rotMtrx);
 
-			size_t sizeTrans = strlen(transHeader.message) + 1;
+			pNode->setTranslation(*translate);
+			pNode->setScale(*scale);
+			pNode->setRotation(*rotMtrx);
+
+			delete translate;
+			delete scale;
+			delete rotation;
+			delete rotMtrx;
+
+			/*size_t sizeTrans = strlen(mainHeader->name) + 1;
 			wchar_t* transStr = new wchar_t[sizeTrans] {};
-			mbstowcs(transStr, transHeader.message, sizeTrans);
+			mbstowcs(transStr, mainHeader->name, sizeTrans);
 
 			std::wstring printThis =
 				L" - Translate: " +
@@ -158,7 +172,8 @@ void MayaViewer::update(float elapsedTime)
 			OutputDebugStringW(printMe.c_str());
 			OutputDebugStringW(printDat.c_str());
 
-			delete[]transStr;
+			delete[]transStr;*/
+		}
 		}
 	}
 
@@ -241,7 +256,7 @@ void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const
 		return;
 	}
 	
-	Node* pNode = _scene->addNode(mainHeader->nodeName.cStr);
+	Node* pNode = _scene->addNode(mainHeader->name.cStr);
 
 	Model* pModel = Model::create(pMesh);
 	if (!pModel)
