@@ -308,28 +308,14 @@ void MayaViewer::recreateMesh(const MeshInfoHeader& header, void* pMeshData, con
 		return;
 	}
 
-	Model* pModel = dynamic_cast<Model*>(pNode->getDrawable());
-	if (!pModel)
-	{
-		OutputDebugString(L"Couldn't get drawble...\n");
-		return;
-	}
-
-	Mesh* pMesh = pModel->getMesh();
-	if (!pMesh)
-	{
-		OutputDebugString(L"Couldn't get mesh...\n");
-		return;
-	}
-
-	pMesh = createMesh(header, pMeshData);
+	Mesh* pMesh = createMesh(header, pMeshData);
 	if (!pMesh)
 	{
 		OutputDebugString(L"Failed to update mesh...\n");
 		return;
 	}
 
-	pModel = Model::create(pMesh);
+	Model* pModel = Model::create(pMesh);
 	if (!pModel)
 	{
 		OutputDebugString(L"Failed to create model...\n");
@@ -339,8 +325,8 @@ void MayaViewer::recreateMesh(const MeshInfoHeader& header, void* pMeshData, con
 	setMatDefaults(pModel);
 	pNode->setDrawable(pModel);
 
-	//pMesh->mapVertexBuffer();
-	//pMesh->unmapVertexBuffer();
+	SAFE_RELEASE(pMesh);
+	SAFE_RELEASE(pModel);
 }
 
 void MayaViewer::updateMesh(const MeshUpdateHeader& header, const char* nodeName)
