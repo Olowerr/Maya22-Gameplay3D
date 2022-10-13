@@ -183,6 +183,28 @@ void meshTopoAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 #endif
 }
 
+void materialDirtyPlug(MObject& node, MPlug& plug, void* clientData)
+{
+	if (node.hasFn(MFn::kLambert))
+	{
+		MFnDependencyNode material(plug.node());
+		std::cout << material.name() << std::endl;
+
+		MFnLambertShader lambert(node, &status);
+		if (M_OK2)
+		{
+			
+
+			cout << lambert.color() << endl;
+			lambert.hasAttribute("Color", &status);
+			if (M_OK2)
+			{
+				SendMaterialData(lambert, producerBuffer, plug.node());
+			}
+		}
+	}
+}
+
 void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* x)
 {
 	if (msg & MNodeMessage::kConnectionMade)
@@ -209,9 +231,46 @@ void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 						SendMaterialData(tempLamb, producerBuffer, plug.node());
 					}
 				}
+
+				MFnMesh mesh(plug.node(), &status);
+				MFnDagNode dag(mesh.parent(0), &status);
+				std::string nodeName = dag.name(&status).asChar();
+
+				MCallbackId id = MNodeMessage::addNodeDirtyPlugCallback(connection, materialDirtyPlug, nullptr, &status);
+				if (M_OK2)
+					addCallback(nodeName + "DirtyMaterialPlug", id);
 			}
 		}
 	}
+	//if (msg & MNodeMessage::kAttributeSet)
+	//{
+	//	cout << "hej" << endl;
+	//	if (otherPlug.node().hasFn(MFn::kLambert))
+	//	{
+	//		cout << "hej" << endl;
+	//		MFnDependencyNode material(otherPlug.node());
+	//		std::cout << material.name() << std::endl;
+
+	//		MPlugArray connections;
+	//		MPlug shaderPlug = material.findPlug("surfaceShader", false);
+	//		shaderPlug.connectedTo(connections, true, false);
+
+	//		for (size_t i = 0; i < connections.length(); i++)
+	//		{
+	//			MObject connection(connections[i].node());
+	//			if (connection.hasFn(MFn::kLambert))
+	//			{
+	//				MFnLambertShader tempLamb(connection);
+	//				std::cout << "Lambert material name: " << tempLamb.name() << std::endl;
+	//				tempLamb.hasAttribute("Color", &status);
+	//				if (M_OK2)
+	//				{
+	//					SendMaterialData(tempLamb, producerBuffer, plug.node());
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
 }
 
 void meshTopoChanged(MObject& node, void* clientData)
@@ -228,7 +287,7 @@ void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 	std::cout << "MESH DIRTY | ";
 	printPlugPath(plug);
 #endif
-
+	
 	MFnMesh mesh(node, &status);
 	if (M_OK2)
 	{
@@ -305,6 +364,67 @@ void transformAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, 
 	}
 }
 
+void iterateScene()
+{
+	MItDag meshIterator(MItDag::kBreadthFirst, MFn::kMesh, &status);
+	for (; !meshIterator.isDone(); meshIterator.next())
+	{
+		MFnDependencyNode dgNode(meshIterator.currentItem(), &status);
+		MCallbackId id;
+		std::string name = dgNode.name().asChar();
+		MObject node(meshIterator.currentItem());
+
+		cout << name << endl;
+
+		// MESHES
+		if (node.hasFn(MFn::kMesh))
+		{
+			cout << "hej" << endl;
+			id = MNodeMessage::addNodeDirtyPlugCallback(node, meshDirtyPlug, nullptr, &status);
+			if (M_OK2)
+				addCallback(name + "DirtyPlug", id);
+
+			id = MPolyMessage::addPolyTopologyChangedCallback(node, meshTopoChanged, nullptr, &status);
+			if (M_OK2)
+				addCallback(name + "TopoChanged", id);
+
+			id = MNodeMessage::addAttributeChangedCallback(node, meshAttributeChanged, nullptr, &status);
+			if (M_OK2)
+				addCallback(name + "AttriChanged", id);
+
+			id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
+			if (M_OK2)
+				addCallback(name + "MaterialChanged", id);
+
+			id = MNodeMessage::addNodeDirtyPlugCallback(node, materialDirtyPlug, nullptr, &status);
+			if (M_OK2)
+				addCallback(name + "DirtyMaterialPlug", id);
+		}
+	}
+
+	MItDag transIterator(MItDag::kBreadthFirst, MFn::kTransform, &status);
+	for (; !transIterator.isDone(); transIterator.next())
+	{
+		MFnDependencyNode dgNode(transIterator.currentItem(), &status);
+		MCallbackId id;
+		std::string name = dgNode.name().asChar();
+		MObject node(transIterator.currentItem());
+
+		cout << name << endl;
+
+		// TRANSFORMS
+		MFnMesh mesh(transIterator.currentItem(), &status);
+		MObject transNode(mesh.parent(0));
+		if (node.hasFn(MFn::kTransform))
+		{
+			cout << "hej doo" << endl;
+			id = MNodeMessage::addAttributeChangedCallback(transNode, transformAttributeChanged, NULL, &status);
+			if (M_OK2)
+				addCallback(name + "TranformChanged", id);
+		}
+	}
+}
+
 void nodeAdded(MObject& node, void* clientData)
 {
 	MFnDependencyNode dgNode(node, &status);
@@ -329,7 +449,11 @@ void nodeAdded(MObject& node, void* clientData)
 
 			id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
 			if (M_OK2)
-				addCallback(name + "Material changed", id);
+				addCallback(name + "MaterialChanged", id);
+
+			id = MNodeMessage::addNodeDirtyPlugCallback(node, materialDirtyPlug, nullptr, &status);
+			if (M_OK2)
+				addCallback(name + "DirtyMaterialPlug", id);
 		}
 
 		if (node.hasFn(MFn::kTransform))
@@ -357,6 +481,8 @@ EXPORT MStatus initializePlugin(MObject obj) {
 	std::cerr.set_rdbuf(MStreamUtils::stdErrorStream().rdbuf());
 	std::cout << "\n\n\n\nPlugin successfully loaded\n"
 		"=======================================================\n\n\n\n";
+
+	iterateScene();
 
 	// register callbacks here for
 	MCallbackId callBackId;

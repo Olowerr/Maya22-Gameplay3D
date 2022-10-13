@@ -69,6 +69,8 @@ private:
     char* msg;
     SectionHeader* mainHeader;
 
+    std::unordered_map<std::string, Material*> materials;
+
     /**
      * Draws the scene each frame.
      */
@@ -77,7 +79,7 @@ private:
     // Helpers
     Mesh* createMesh(const MeshInfoHeader& info, void* data);
 	Mesh* createCubeMesh(float size = 1.0f);
-	Material* createMaterial();
+	Material* createMaterial(const MaterialDataHeader& header, void* pMatdata, const char* nodeName);
 
     void setMatDefaults(Model* pModel);
     void setMaterial(const MaterialDataHeader& header, void* pMatdata, const char* nodeName);
