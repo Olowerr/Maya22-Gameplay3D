@@ -111,7 +111,7 @@ void MayaViewer::update(float elapsedTime)
 			delete[]str;
 		}
 
-		if (mainHeader->header == NEW_TRANSFORM)
+		if (mainHeader->header == TRANSFORM_DATA)
 		{
 			OutputDebugStringW(L"We got a transformation matrix\n");
 
