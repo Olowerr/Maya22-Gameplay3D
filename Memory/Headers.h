@@ -48,5 +48,5 @@ struct TransformDataHeader
 
 struct MaterialDataHeader
 {
-	float color[3];
+	float color[4];
 };

@@ -221,3 +221,50 @@ inline bool SendTransformData(const MObject& obj, Comlib* pComlib)
 
 	return false;
 }
+
+inline bool SendMaterialData(MFnLambertShader& shader, Comlib* pComlib, const MObject& node)
+{
+	MStatus status;
+	MFnMesh mesh(node, &status);
+	if (M_FAIL(status))
+		return false;
+
+	MFnDagNode dag(mesh.parent(0), &status);
+	if (M_FAIL(status))
+		return false;
+
+
+	if (M_FAIL(status))
+		return false;
+
+	const char* nodeName = dag.name(&status).asChar();
+	if (status == MS::kSuccess)
+	{
+		std::cout << nodeName << std::endl;
+
+		MaterialDataHeader matHeader{};
+		matHeader.color[0] = shader.color().r;
+		matHeader.color[1] = shader.color().g;
+		matHeader.color[2] = shader.color().b;
+		matHeader.color[3] = shader.color().a;
+
+		size_t matMsgLen = sizeof(MaterialDataHeader) + 1;
+		char* msg = new char[matMsgLen];
+		size_t offset = 0;
+
+		memcpy(msg + offset, &matHeader, sizeof(MaterialDataHeader));
+
+		SectionHeader secHeader;
+		secHeader.name = nodeName;
+		secHeader.header = MATERIAL_DATA;
+		secHeader.messageLength = matMsgLen;
+		secHeader.messageID = 0;
+		pComlib->Send(msg, &secHeader);
+
+		delete[]msg;
+
+		return true;
+	}
+
+	return false;
+}

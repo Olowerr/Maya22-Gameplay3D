@@ -115,35 +115,15 @@ void MayaViewer::update(float elapsedTime)
 		}
 		case TRANSFORM_DATA:
 		{
-			//OutputDebugStringW(L"We got a transformation matrix\n");
-
-			Node* pNode = _scene->findNode(mainHeader->name);
-			if (!pNode)
-			{
-				OutputDebugString(L"Could not find node...\n");
-				break;
-			}
-
 			TransformDataHeader transHeader;
 			memcpy(&transHeader, msg, sizeof(TransformDataHeader));
 
-			Matrix mtrx = Matrix(*transHeader.transMtrx);
-			Vector3* translate = new Vector3;
-			Vector3* scale = new Vector3;
-			Quaternion* rotation = new Quaternion;
-			mtrx.decompose(scale, rotation, translate);
+			if (_scene->findNode(mainHeader->name))
+				setTransform(transHeader, mainHeader->name);
+			else
+				OutputDebugString(L"Could not find node...\n");
 
-			Matrix* rotMtrx = new Matrix;
-			Matrix::createRotation(*rotation, rotMtrx);
-
-			pNode->setTranslation(*translate);
-			pNode->setScale(*scale);
-			pNode->setRotation(*rotMtrx);
-
-			delete translate;
-			delete scale;
-			delete rotation;
-			delete rotMtrx;
+			break;
 
 			/*size_t sizeTrans = strlen(mainHeader->name) + 1;
 			wchar_t* transStr = new wchar_t[sizeTrans] {};
@@ -173,6 +153,18 @@ void MayaViewer::update(float elapsedTime)
 			OutputDebugStringW(printDat.c_str());
 
 			delete[]transStr;*/
+		}
+		case MATERIAL_DATA:
+		{
+			MaterialDataHeader matHeader;
+			memcpy(&matHeader, msg, sizeof(MaterialDataHeader));
+
+			if (_scene->findNode(mainHeader->name))
+				setMaterial(matHeader, msg + sizeof(MaterialDataHeader), mainHeader->name);
+			else
+				OutputDebugString(L"Could not find node...\n");
+
+			break;
 		}
 		}
 	}
@@ -243,6 +235,35 @@ void MayaViewer::setMatDefaults(Model* pModel)
 
     Texture::Sampler* pSampler = pMat->getParameter("u_diffuseTexture")->setValue("res/png/crate.png", true);
     pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+}
+
+void MayaViewer::setMaterial(const MaterialDataHeader& header, void* pMatdata, const char* nodeName)
+{
+	Node* pNode = _scene->findNode(mainHeader->name);
+	if (!pNode)
+	{
+		OutputDebugString(L"Could not find node...\n");
+		return;
+	}
+	Model* pModel = dynamic_cast<Model*>(pNode->getDrawable());
+	if (!pModel)
+	{
+		OutputDebugString(L"Couldn't get drawble...\n");
+		return;
+	}
+	Vector4 color = header.color;
+
+	Material* pMat = pModel->setMaterial("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
+	pMat->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
+	pMat->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
+	pMat->getParameter("u_diffuseColor")->setValue(color);
+	pMat->getParameter("u_ambientColor")->setValue(Vector3(0.2f, 0.2f, 0.2f));
+	pMat->getParameter("u_pointLightColor[0]")->setValue(light->getColor());
+	pMat->getParameter("u_pointLightPosition[0]")->bindValue(light->getNode(), &Node::getTranslationWorld);
+	pMat->getParameter("u_pointLightRangeInverse[0]")->bindValue(light, &Light::getRangeInverse);
+	pMat->getStateBlock()->setCullFace(true);
+	pMat->getStateBlock()->setDepthTest(true);
+	pMat->getStateBlock()->setDepthWrite(true);
 }
 
 void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName)
@@ -342,6 +363,34 @@ void MayaViewer::updateMesh(const MeshUpdateHeader& header, const char* nodeName
 	Vertex* pData = (Vertex*)pMesh->mapVertexBuffer();
 	pData[header.vertexIndex] = header.newVertex;
 	pMesh->unmapVertexBuffer();
+}
+
+void MayaViewer::setTransform(const TransformDataHeader& header, const char* nodeName)
+{
+	Node* pNode = _scene->findNode(mainHeader->name);
+	if (!pNode)
+	{
+		OutputDebugString(L"Could not find node...\n");
+		return;
+	}
+
+	Matrix mtrx = Matrix(*header.transMtrx);
+	Vector3* translate = new Vector3;
+	Vector3* scale = new Vector3;
+	Quaternion* rotation = new Quaternion;
+	mtrx.decompose(scale, rotation, translate);
+
+	Matrix* rotMtrx = new Matrix;
+	Matrix::createRotation(*rotation, rotMtrx);
+
+	pNode->setTranslation(*translate);
+	pNode->setScale(*scale);
+	pNode->setRotation(*rotMtrx);
+
+	delete translate;
+	delete scale;
+	delete rotation;
+	delete rotMtrx;
 }
 
 void MayaViewer::keyEvent(Keyboard::KeyEvent evt, int key)

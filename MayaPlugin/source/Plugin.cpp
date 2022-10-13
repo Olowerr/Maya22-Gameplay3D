@@ -183,7 +183,7 @@ void meshTopoAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 #endif
 }
 
-void shapeAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* x)
+void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* x)
 {
 	if (msg & MNodeMessage::kConnectionMade)
 	{
@@ -206,7 +206,7 @@ void shapeAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlu
 					tempLamb.hasAttribute("Color", &status);
 					if (M_OK2)
 					{
-						std::cout << tempLamb.color() << std::endl;
+						SendMaterialData(tempLamb, producerBuffer, plug.node());
 					}
 				}
 			}
@@ -327,7 +327,7 @@ void nodeAdded(MObject& node, void* clientData)
 			if (M_OK2)
 				addCallback(name + "AttriChanged", id);
 
-			id = MNodeMessage::addAttributeChangedCallback(node, shapeAttributeChanged, NULL, &status);
+			id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
 			if (M_OK2)
 				addCallback(name + "Material changed", id);
 		}
