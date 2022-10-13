@@ -8,7 +8,8 @@ enum Headers
 	MESSAGE,
 	MESH_NEW,
 	MESH_UPDATE,
-	TRANSFORM_DATA
+	TRANSFORM_DATA,
+	MATERIAL_DATA
 };
 
 struct Vertex
@@ -43,4 +44,9 @@ struct MeshUpdateHeader
 struct TransformDataHeader
 {
 	float transMtrx[4][4];
+};
+
+struct MaterialDataHeader
+{
+	float color[4];
 };
