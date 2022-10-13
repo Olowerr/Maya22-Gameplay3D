@@ -62,9 +62,12 @@ void SendTransformData(MObject obj)
 		producerBuffer->Send(msg, &secHeader);
 
 		delete[]msg;
-		if (!dag.child(1).isNull())
+		for (size_t i = 0; i < dag.childCount(); i++)
 		{
-			SendTransformData(dag.child(1));
+			if (!dag.child(i).isNull())
+			{
+				SendTransformData(dag.child(i));
+			}
 		}
 	}
 }
