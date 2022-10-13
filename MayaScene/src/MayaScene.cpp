@@ -167,6 +167,13 @@ void MayaViewer::update(float elapsedTime)
 			break;
 		}
 		}
+
+		if (msg)
+		{
+			delete[] msg;
+			msg = nullptr;
+		}
+
 	}
 
 
@@ -269,7 +276,6 @@ void MayaViewer::setMaterial(const MaterialDataHeader& header, void* pMatdata, c
 void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName)
 {
 	Mesh* pMesh = createMesh(header, msg + sizeof(MeshInfoHeader));
-	delete[] msg;
 	
 	if (!pMesh)
 	{
