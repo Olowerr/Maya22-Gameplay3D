@@ -9,7 +9,8 @@ enum Headers
 	MESH_NEW,
 	MESH_UPDATE,
 	TRANSFORM_DATA,
-	MATERIAL_DATA
+	MATERIAL_DATA,
+	CAMERA_DATA
 };
 
 struct Vertex
@@ -49,4 +50,16 @@ struct TransformDataHeader
 struct MaterialDataHeader
 {
 	float color[4];
+};
+
+struct CameraHeader
+{
+	bool perspective;
+
+	float viewMatrix[4][4];
+
+	// ratio = width / height
+	float width;
+	float height;
+	float fieldOfView;
 };

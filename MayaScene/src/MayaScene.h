@@ -79,12 +79,13 @@ private:
 	Mesh* createCubeMesh(float size = 1.0f);
 	Material* createMaterial();
 
+
     void setMatDefaults(Model* pModel);
     void setMaterial(const MaterialDataHeader& header, void* pMatdata, const char* nodeName);
     void createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
     void recreateMesh(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
     void updateMesh(const MeshUpdateHeader& header, const char* nodeName);
-    void setTransform(const TransformDataHeader& header, const char* nodeName);
+    void setTransform(const float* matrix, const char* nodeName);
 
 
     // temp

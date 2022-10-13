@@ -28,6 +28,7 @@ void MayaViewer::initialize()
 
 	Camera* cam = Camera::createPerspective(45.0f, getAspectRatio(), 1.0, 100.0f);
 	Node* cameraNode = _scene->addNode("camera");
+
 	cameraNode->setCamera(cam);
 	_scene->setActiveCamera(cam);
 	SAFE_RELEASE(cam);
@@ -119,7 +120,7 @@ void MayaViewer::update(float elapsedTime)
 			memcpy(&transHeader, msg, sizeof(TransformDataHeader));
 
 			if (_scene->findNode(mainHeader->name))
-				setTransform(transHeader, mainHeader->name);
+				setTransform(*transHeader.transMtrx, mainHeader->name);
 			else
 				OutputDebugString(L"Could not find node...\n");
 
@@ -163,9 +164,28 @@ void MayaViewer::update(float elapsedTime)
 				setMaterial(matHeader, msg + sizeof(MaterialDataHeader), mainHeader->name);
 			else
 				OutputDebugString(L"Could not find node...\n");
-
 			break;
 		}
+		case CAMERA_DATA:
+		{
+			CameraHeader camHeader;
+			memcpy(&camHeader, msg, sizeof(CameraHeader));
+			const float AspectRatio = camHeader.width / camHeader.height;
+
+			Node* pNode = _scene->findNode(mainHeader->name);
+			if (!pNode)
+				pNode = _scene->addNode(mainHeader->name);				
+
+			pNode->setCamera(camHeader.perspective ?
+				Camera::createPerspective(camHeader.fieldOfView, AspectRatio, 0.1f, 1000.f) :
+				Camera::createOrthographic(camHeader.width, camHeader.height, AspectRatio, 0.1f, 1000.f));
+
+			setTransform(*camHeader.viewMatrix, mainHeader->name);
+
+			_scene->setActiveCamera(pNode->getCamera());
+			
+		}
+
 		}
 
 		if (msg)
@@ -357,7 +377,7 @@ void MayaViewer::updateMesh(const MeshUpdateHeader& header, const char* nodeName
 	pMesh->unmapVertexBuffer();
 }
 
-void MayaViewer::setTransform(const TransformDataHeader& header, const char* nodeName)
+void MayaViewer::setTransform(const float* matrix, const char* nodeName)
 {
 	Node* pNode = _scene->findNode(mainHeader->name);
 	if (!pNode)
@@ -366,7 +386,7 @@ void MayaViewer::setTransform(const TransformDataHeader& header, const char* nod
 		return;
 	}
 
-	Matrix mtrx = Matrix(*header.transMtrx);
+	Matrix mtrx = Matrix(matrix);
 	Vector3* translate = new Vector3;
 	Vector3* scale = new Vector3;
 	Quaternion* rotation = new Quaternion;

@@ -305,6 +305,16 @@ void transformAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, 
 	}
 }
 
+void cameraMoved(const MString& str, void* clientData)
+{
+	MString activePanel = MGlobal::executeCommandStringResult("getPanel -wf");
+
+	if (strcmp(str.asChar(), activePanel.asChar()) == 0)
+	{
+		sendCamera(M3dView::active3dView(), producerBuffer);
+	}
+}
+
 void nodeAdded(MObject& node, void* clientData)
 {
 	MFnDependencyNode dgNode(node, &status);
@@ -358,12 +368,33 @@ EXPORT MStatus initializePlugin(MObject obj) {
 	std::cout << "\n\n\n\nPlugin successfully loaded\n"
 		"=======================================================\n\n\n\n";
 
+
 	// register callbacks here for
 	MCallbackId callBackId;
 
 	callBackId = MDGMessage::addNodeAddedCallback(nodeAdded, "dependNode", NULL, &status);
 	if (M_OK2)
 		callbacks.insert({ "nodeCreationCB", callBackId });
+
+
+	// Cameras
+	callBackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel1", cameraMoved);
+	if (M_OK2)
+		callbacks.insert({ "camera1", callBackId});
+
+	callBackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel2", cameraMoved);
+	if (M_OK2)
+		callbacks.insert({ "camera2", callBackId});
+
+	callBackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel3", cameraMoved);
+	if (M_OK2)
+		callbacks.insert({ "camera3", callBackId});
+
+	callBackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel4", cameraMoved);
+	if (M_OK2)
+		callbacks.insert({ "camera4", callBackId });
+
+
 
 	producerBuffer = new Comlib(L"Filemap",150, ProcessType::Producer);
 
