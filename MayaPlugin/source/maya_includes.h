@@ -185,6 +185,16 @@ inline void printMatrix(const MMatrix& matrix)
 {
 	float values[4][4];
 	matrix.get(values);
+	std::cout << "[(" << values[0][0] << ", " << values[0][1] << ", " << values[0][2] << ", " << values[0][3] << "),\n ";
+	std::cout << "(" << values[1][0] << ", " << values[1][1] << ", " << values[1][2] << ", " << values[1][3] << "), \n";
+	std::cout << "(" << values[2][0] << ", " << values[2][1] << ", " << values[2][2] << ", " << values[2][3] << "), \n";
+	std::cout << "(" << values[3][0] << ", " << values[3][1] << ", " << values[3][2] << ", " << values[3][3] << ")]\n\n";
+}
+
+inline void printMatrix(const MFloatMatrix& matrix)
+{
+	float values[4][4];
+	matrix.get(values);
 	std::cout << "[(" << values[0][0] << ", " << values[0][1] << ", " << values[0][2] << ", " << values[0][3] << "), ";
 	std::cout << "(" << values[1][0] << ", " << values[1][1] << ", " << values[1][2] << ", " << values[1][3] << "), ";
 	std::cout << "(" << values[2][0] << ", " << values[2][1] << ", " << values[2][2] << ", " << values[2][3] << "), ";

@@ -268,3 +268,46 @@ inline bool SendMaterialData(MFnLambertShader& shader, Comlib* pComlib, const MO
 
 	return false;
 }
+
+inline bool sendCamera(M3dView view, Comlib* pComlib)
+{
+	MStatus status;
+
+	//view.updateViewingParameters();
+
+	MDagPath camPath;
+	view.getCamera(camPath);
+	MFnCamera camera(camPath, &status);
+
+	if (M_FAIL(status))
+		return false;
+
+
+	CameraHeader cameraData{};
+
+	MMatrix viewMatrix = MFnTransform(camera.parent(0)).transformationMatrix();
+	viewMatrix.get(cameraData.viewMatrix);
+
+	cameraData.fieldOfView = std::asin(camera.horizontalFieldOfView()) * (180.f / M_PI);
+	cameraData.perspective = !camera.isOrtho();
+
+	if (cameraData.perspective)
+	{
+		cameraData.width = (float)view.portWidth();
+		cameraData.height = (float)view.portHeight();
+	}
+	else
+	{
+		cameraData.width = (float)camera.orthoWidth();
+		cameraData.height = cameraData.width / ((float)view.portWidth() / (float)view.portHeight());
+	}
+
+	SectionHeader secHeader;
+	secHeader.name = camera.name().asChar();
+	secHeader.messageLength = sizeof(CameraHeader);
+	secHeader.header = Headers::CAMERA_DATA;
+
+	pComlib->Send((char*)&cameraData, &secHeader);
+
+	return true;
+}
