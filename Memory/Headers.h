@@ -6,7 +6,8 @@ enum Headers
 {
 	MESSAGE,
 	NEW_MESH,
-	MESH_DATA
+	MESH_DATA,
+	TRANSFORM_DATA
 };
 
 struct Vertex
@@ -37,4 +38,10 @@ struct MeshDataHeader
 struct NewMeshHeader
 {
 	char message[1024]{};
+};
+
+struct TransformDataHeader
+{
+	char message[1024]{};
+	float transMtrx[4][4];
 };
