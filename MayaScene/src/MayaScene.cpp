@@ -110,7 +110,7 @@ void MayaViewer::update(float elapsedTime)
 			if (_scene->findNode(mainHeader->name))
 				updateMesh(header, mainHeader->name);
 			else
-				OutputDebugString(L"Could not find node...\n");
+				OutputDebugString(L"MESH_UPDATE | Could not find node...\n");
 
 			break;
 		}
@@ -120,9 +120,9 @@ void MayaViewer::update(float elapsedTime)
 			memcpy(&transHeader, msg, sizeof(TransformDataHeader));
 
 			if (_scene->findNode(mainHeader->name))
-				setTransform(*transHeader.transMtrx, mainHeader->name);
+				setTransform(transHeader, mainHeader->name);
 			else
-				OutputDebugString(L"Could not find node...\n");
+				OutputDebugString(L"TRANSFORM_DATA | Could not find node...\n");
 
 			break;
 
@@ -163,7 +163,7 @@ void MayaViewer::update(float elapsedTime)
 			if (_scene->findNode(mainHeader->name))
 				setMaterial(matHeader, msg + sizeof(MaterialDataHeader), mainHeader->name);
 			else
-				OutputDebugString(L"Could not find node...\n");
+				OutputDebugString(L"MATERIAL_DATA | Could not find node...\n");
 			break;
 		}
 		case CAMERA_DATA:
@@ -174,19 +174,33 @@ void MayaViewer::update(float elapsedTime)
 
 			Node* pNode = _scene->findNode(mainHeader->name);
 			if (!pNode)
-				pNode = _scene->addNode(mainHeader->name);				
+				pNode = _scene->addNode(mainHeader->name);
 
-			pNode->setCamera(camHeader.perspective ?
-				Camera::createPerspective(camHeader.fieldOfView, AspectRatio, 0.1f, 1000.f) :
-				Camera::createOrthographic(camHeader.width, camHeader.height, AspectRatio, 0.1f, 1000.f));
+			Camera* pCamera = pNode->getCamera();
 
-			setTransform(*camHeader.viewMatrix, mainHeader->name);
+			if (!pCamera)
+			{
+				pNode->setCamera(createCamera(camHeader));
+			}
+			else
+			{
+				pCamera = pNode->getCamera();
+				pCamera->setAspectRatio(AspectRatio);
 
-			_scene->setActiveCamera(pNode->getCamera());
-			
+				if (camHeader.perspective)
+					pCamera->setFieldOfView(camHeader.fieldOfView);
+				else
+				{
+					pCamera->setZoomX(camHeader.width);
+					pCamera->setZoomY(camHeader.height);
+				}
+			}
+
+			if (_scene->getActiveCamera() != pCamera) // maybe if-statement unnecessary
+				_scene->setActiveCamera(pNode->getCamera());
+		}
 		}
 
-		}
 
 		if (msg)
 		{
@@ -226,6 +240,14 @@ void MayaViewer::update(float elapsedTime)
 		camnode->rotate(camnode->getRightVectorWorld(), MATH_DEG_TO_RAD(gDeltaY / 10.0));
 		camnode->rotate(camnode->getUpVectorWorld(), MATH_DEG_TO_RAD(gDeltaX / 5.0));
 	}
+}
+
+Camera* MayaViewer::createCamera(const CameraHeader& cameraHeader)
+{
+	const float AspectRatio = cameraHeader.width / cameraHeader.height;
+	return cameraHeader.perspective ?
+		Camera::createPerspective(cameraHeader.fieldOfView, AspectRatio, 0.1f, 1000.f) :
+		Camera::createOrthographic(cameraHeader.width, cameraHeader.height, AspectRatio, 0.1f, 1000.f);
 }
 
 void MayaViewer::render(float elapsedTime)
@@ -296,10 +318,9 @@ void MayaViewer::setMaterial(const MaterialDataHeader& header, void* pMatdata, c
 void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName)
 {
 	Mesh* pMesh = createMesh(header, msg + sizeof(MeshInfoHeader));
-	
 	if (!pMesh)
 	{
-		OutputDebugString(L"Failed to create mesh...\n");
+		OutputDebugString(L"createNode | Failed to create mesh...\n");
 		return;
 	}
 	
@@ -308,7 +329,7 @@ void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const
 	Model* pModel = Model::create(pMesh);
 	if (!pModel)
 	{
-		OutputDebugString(L"Failed to create model...\n");
+		OutputDebugString(L"createNode | Failed to create model...\n");
 		return;
 	}
 
@@ -324,21 +345,21 @@ void MayaViewer::recreateMesh(const MeshInfoHeader& header, void* pMeshData, con
 	Node* pNode = _scene->findNode(nodeName);
 	if (!pNode)
 	{
-		OutputDebugString(L"Couldn't find node...\n");
+		OutputDebugString(L"recreateMesh | Couldn't find node...\n");
 		return;
 	}
 
 	Mesh* pMesh = createMesh(header, pMeshData);
 	if (!pMesh)
 	{
-		OutputDebugString(L"Failed to update mesh...\n");
+		OutputDebugString(L"recreateMesh | Failed to update mesh...\n");
 		return;
 	}
 
 	Model* pModel = Model::create(pMesh);
 	if (!pModel)
 	{
-		OutputDebugString(L"Failed to create model...\n");
+		OutputDebugString(L"recreateMesh | Failed to create model...\n");
 		return;
 	}
 
@@ -354,21 +375,21 @@ void MayaViewer::updateMesh(const MeshUpdateHeader& header, const char* nodeName
 	Node* pNode = _scene->findNode(nodeName);
 	if (!pNode)
 	{
-		OutputDebugString(L"Couldn't find node...\n");
+		OutputDebugString(L"updateMesh | Couldn't find node...\n");
 		return;
 	}
 
 	Model* pModel = dynamic_cast<Model*>(pNode->getDrawable());
 	if (!pModel)
 	{
-		OutputDebugString(L"Couldn't get drawble...\n");
+		OutputDebugString(L"updateMesh | Couldn't get drawble...\n");
 		return;
 	}
 
 	Mesh* pMesh = pModel->getMesh();
 	if (!pMesh)
 	{
-		OutputDebugString(L"Couldn't get mesh...\n");
+		OutputDebugString(L"updateMesh | Couldn't get mesh...\n");
 		return;
 	}
 
@@ -377,16 +398,16 @@ void MayaViewer::updateMesh(const MeshUpdateHeader& header, const char* nodeName
 	pMesh->unmapVertexBuffer();
 }
 
-void MayaViewer::setTransform(const float* matrix, const char* nodeName)
+void MayaViewer::setTransform(const TransformDataHeader& traHeader, const char* nodeName)
 {
 	Node* pNode = _scene->findNode(mainHeader->name);
 	if (!pNode)
 	{
-		OutputDebugString(L"Could not find node...\n");
+		OutputDebugString(L"setTransform | Could not find node...\n");
 		return;
 	}
 
-	Matrix mtrx = Matrix(matrix);
+	Matrix mtrx = Matrix(*traHeader.transMtrx);
 	Vector3* translate = new Vector3;
 	Vector3* scale = new Vector3;
 	Quaternion* rotation = new Quaternion;
@@ -542,7 +563,7 @@ Mesh* MayaViewer::createMesh(const MeshInfoHeader& info, void* data)
 	Mesh* mesh = Mesh::createMesh(VertexFormat(elements, 3), info.numVertex, true);
 	if (mesh == NULL)
 	{
-		GP_ERROR("Failed to create mesh.");
+		GP_ERROR("createMesh | Failed to create mesh.");
 		return NULL;
 	}
 	mesh->setVertexData(data, 0, info.numVertex);

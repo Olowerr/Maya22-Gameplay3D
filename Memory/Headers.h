@@ -56,8 +56,6 @@ struct CameraHeader
 {
 	bool perspective;
 
-	float viewMatrix[4][4];
-
 	// ratio = width / height
 	float width;
 	float height;

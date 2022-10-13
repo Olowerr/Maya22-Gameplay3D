@@ -67,38 +67,15 @@ void removeCallback(const std::string& name)
 
 	------
 	 
-	USE MItMeshFaceVertex FOR VERTEX BUFFER 
-	USE mesh.getTriangleOffsets FOR INDEX BUFFER
-	WHEN DRAGGING VERT FIND AFFECTED VERTS BY LOOP THRO MIT AND SEARCH FOR vertId() == INDEX
-	SAVE I WHEN FOUND AND UPDATE VERTEX BUFFER WITH SAVED INDICIES
-	// COULD MAYBE JUST SEND THE NEW VERTEX DATA WHEN vertId() == PLUG INDEX RIGHT ?
+	 Fix camera FOV and view over the height
+
+	------
 
 	USE MItMeshFaceVertex FOR VERTEX BUFFER 
 	USE mesh.getTriangleOffsets FOR INDEX BUFFER
 	WHEN DRAGGING VERT FIND AFFECTED VERTS BY LOOP THRO MIT AND SEARCH FOR vertId() == INDEX
 	SAVE I WHEN FOUND AND UPDATE VERTEX BUFFER WITH SAVED INDICIES
 	// COULD MAYBE JUST SEND THE NEW VERTEX DATA WHEN vertId() == PLUG INDEX RIGHT ?
-
-	USE MItMeshFaceVertex FOR VERTEX BUFFER 
-	USE mesh.getTriangleOffsets FOR INDEX BUFFER
-	WHEN DRAGGING VERT FIND AFFECTED VERTS BY LOOP THRO MIT AND SEARCH FOR vertId() == INDEX
-	SAVE I WHEN FOUND AND UPDATE VERTEX BUFFER WITH SAVED INDICIES
-	// COULD MAYBE JUST SEND THE NEW VERTEX DATA WHEN vertId() == PLUG INDEX RIGHT ?
-
-	USE MItMeshFaceVertex FOR VERTEX BUFFER 
-	USE mesh.getTriangleOffsets FOR INDEX BUFFER
-	WHEN DRAGGING VERT FIND AFFECTED VERTS BY LOOP THRO MIT AND SEARCH FOR vertId() == INDEX
-	SAVE I WHEN FOUND AND UPDATE VERTEX BUFFER WITH SAVED INDICIES
-	// COULD MAYBE JUST SEND THE NEW VERTEX DATA WHEN vertId() == PLUG INDEX RIGHT ?
-
-	USE MItMeshFaceVertex FOR VERTEX BUFFER 
-	USE mesh.getTriangleOffsets FOR INDEX BUFFER
-	WHEN DRAGGING VERT FIND AFFECTED VERTS BY LOOP THRO MIT AND SEARCH FOR vertId() == INDEX
-	SAVE I WHEN FOUND AND UPDATE VERTEX BUFFER WITH SAVED INDICIES
-	// COULD MAYBE JUST SEND THE NEW VERTEX DATA WHEN vertId() == PLUG INDEX RIGHT ?
-
-
-
 
 */
 
@@ -418,11 +395,20 @@ void iterateScene()
 		if (node.hasFn(MFn::kTransform))
 		{
 			cout << "hej doo" << endl;
-			id = MNodeMessage::addAttributeChangedCallback(transNode, transformAttributeChanged, NULL, &status);
+			id = MNodeMessage::addAttributeChangedCallback(node, transformAttributeChanged, NULL, &status);
 			if (M_OK2)
 				addCallback(name + "TranformChanged", id);
 		}
 	}
+
+	M3dView view = M3dView::active3dView();
+	sendCamera(view, producerBuffer);
+
+	MDagPath camPath;
+	view.getCamera(camPath);
+	MFnCamera camera(camPath, &status);
+	if (M_OK2)
+		SendTransformData(camera.parent(0), producerBuffer);
 }
 
 void cameraMoved(const MString& str, void* clientData)
@@ -430,9 +416,7 @@ void cameraMoved(const MString& str, void* clientData)
 	MString activePanel = MGlobal::executeCommandStringResult("getPanel -wf");
 
 	if (strcmp(str.asChar(), activePanel.asChar()) == 0)
-	{
 		sendCamera(M3dView::active3dView(), producerBuffer);
-	}
 }
 
 void nodeAdded(MObject& node, void* clientData)
@@ -492,36 +476,36 @@ EXPORT MStatus initializePlugin(MObject obj) {
 	std::cout << "\n\n\n\nPlugin successfully loaded\n"
 		"=======================================================\n\n\n\n";
 
+	producerBuffer = new Comlib(L"Filemap", 150, ProcessType::Producer);
+
+
 	iterateScene();
 
 	// register callbacks here for
-	MCallbackId callBackId;
+	MCallbackId callbackId;
 
-	callBackId = MDGMessage::addNodeAddedCallback(nodeAdded, "dependNode", NULL, &status);
+	callbackId = MDGMessage::addNodeAddedCallback(nodeAdded, "dependNode", NULL, &status);
 	if (M_OK2)
-		callbacks.insert({ "nodeCreationCB", callBackId });
+		callbacks.insert({ "nodeCreationCB", callbackId });
 
 
 	// Cameras
-	callBackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel1", cameraMoved);
+	callbackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel1", cameraMoved);
 	if (M_OK2)
-		callbacks.insert({ "camera1", callBackId});
+		callbacks.insert({ "cameraPanel1", callbackId});
 
-	callBackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel2", cameraMoved);
+	callbackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel2", cameraMoved);
 	if (M_OK2)
-		callbacks.insert({ "camera2", callBackId});
+		callbacks.insert({ "cameraPanel2", callbackId});
 
-	callBackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel3", cameraMoved);
+	callbackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel3", cameraMoved);
 	if (M_OK2)
-		callbacks.insert({ "camera3", callBackId});
+		callbacks.insert({ "cameraPanel3", callbackId});
 
-	callBackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel4", cameraMoved);
+	callbackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel4", cameraMoved);
 	if (M_OK2)
-		callbacks.insert({ "camera4", callBackId });
+		callbacks.insert({ "cameraPanel4", callbackId });
 
-
-
-	producerBuffer = new Comlib(L"Filemap",150, ProcessType::Producer);
 
 	return res;
 }

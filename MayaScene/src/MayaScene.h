@@ -87,8 +87,9 @@ private:
     void createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
     void recreateMesh(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
     void updateMesh(const MeshUpdateHeader& header, const char* nodeName);
-    void setTransform(const float* matrix, const char* nodeName);
+    void setTransform(const TransformDataHeader& matrix, const char* nodeName);
 
+    Camera* createCamera(const CameraHeader& cameraHeader);
 
     // temp
     Light* light;
