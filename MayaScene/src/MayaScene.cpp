@@ -489,6 +489,28 @@ Mesh* MayaViewer::createCubeMesh(float size)
 	return mesh;
 }
 
+Material* MayaViewer::createMaterial(const MaterialDataHeader& header, void* pMatdata, const char* nodeName)
+{
+	Vector4 color = header.color;
+
+	if (!materials.count(nodeName))
+	{
+		materials[nodeName]->create("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
+	}
+	materials[nodeName]->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
+	materials[nodeName]->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
+	materials[nodeName]->getParameter("u_diffuseColor")->setValue(color);
+	materials[nodeName]->getParameter("u_ambientColor")->setValue(Vector3(0.2f, 0.2f, 0.2f));
+	materials[nodeName]->getParameter("u_pointLightColor[0]")->setValue(light->getColor());
+	materials[nodeName]->getParameter("u_pointLightPosition[0]")->bindValue(light->getNode(), &Node::getTranslationWorld);
+	materials[nodeName]->getParameter("u_pointLightRangeInverse[0]")->bindValue(light, &Light::getRangeInverse);
+	materials[nodeName]->getStateBlock()->setCullFace(true);
+	materials[nodeName]->getStateBlock()->setDepthTest(true);
+	materials[nodeName]->getStateBlock()->setDepthWrite(true);
+
+	return materials[nodeName];
+}
+
 Mesh* MayaViewer::createMesh(const MeshInfoHeader& info, void* data)
 {
 	VertexFormat::Element elements[] =
