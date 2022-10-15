@@ -62,12 +62,8 @@ void removeCallback(const std::string& name)
 	Dragging a vertex currently sends the whole mesh.. Need to send only the affected vertices
 
 	------
-	
-	Fix so there aren't any problems when changing node names
 
-	------
-	 
-	 Fix camera FOV and recheck the height
+	Recheck camera height
 
 	------
 

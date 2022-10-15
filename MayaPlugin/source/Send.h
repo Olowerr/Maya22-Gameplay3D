@@ -44,6 +44,11 @@ inline bool sendMesh(const MObject& node, Comlib* pComlib)
 	MStatus f = mesh.getUVs(uArray, vArray);
 	MStatus g = mesh.getAssignedUVs(xUVPerFace, uvIDs);
 
+	/*
+		mesh.getTangents()
+		mesh.getBinormals()
+	*/
+
 	if (M_FAIL(a) || M_FAIL(b) || M_FAIL(c) || M_FAIL(d) || M_FAIL(e) || M_FAIL(f) || M_FAIL(g))
 		return false;
 

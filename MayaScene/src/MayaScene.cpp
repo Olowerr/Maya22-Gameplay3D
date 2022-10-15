@@ -266,8 +266,8 @@ Camera* MayaViewer::createCamera(const CameraHeader& cameraHeader)
 {
 	const float AspectRatio = cameraHeader.width / cameraHeader.height;
 	return cameraHeader.perspective ?
-		Camera::createPerspective(cameraHeader.fieldOfView, AspectRatio, 0.1f, 1000.f) :
-		Camera::createOrthographic(cameraHeader.width, cameraHeader.height, AspectRatio, 0.1f, 1000.f);
+		Camera::createPerspective(cameraHeader.fieldOfView, AspectRatio, 0.1f, 5000.f) :
+		Camera::createOrthographic(cameraHeader.width, cameraHeader.height, AspectRatio, 0.1f, 5000.f);
 }
 
 void MayaViewer::render(float elapsedTime)
@@ -578,7 +578,9 @@ Mesh* MayaViewer::createMesh(const MeshInfoHeader& info, void* data)
 	{
 		VertexFormat::Element(VertexFormat::POSITION, 3),
 		VertexFormat::Element(VertexFormat::TEXCOORD0, 2),
-		VertexFormat::Element(VertexFormat::NORMAL, 3)
+		VertexFormat::Element(VertexFormat::NORMAL, 3),
+		//VertexFormat::Element(VertexFormat::TANGENT, 3),
+		//VertexFormat::Element(VertexFormat::BINORMAL, 3),
 	};
 	Mesh* mesh = Mesh::createMesh(VertexFormat(elements, 3), info.numVertex, true);
 	if (mesh == NULL)
