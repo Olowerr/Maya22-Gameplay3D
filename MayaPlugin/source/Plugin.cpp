@@ -67,7 +67,7 @@ void removeCallback(const std::string& name)
 
 	------
 	 
-	 Fix camera FOV and view over the height
+	 Fix camera FOV and recheck the height
 
 	------
 
@@ -341,26 +341,50 @@ void transformAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, 
 	}
 }
 
+void cameraMoved(const MString& str, void* clientData)
+{
+	MString activePanel = MGlobal::executeCommandStringResult("getPanel -wf");
+
+	if (strcmp(str.asChar(), activePanel.asChar()) == 0)
+		sendCamera(M3dView::active3dView(), producerBuffer);
+}
+
+void nodeNameChange(MObject& node, const MString& prevName, void* clientData)
+{
+	MFnTransform traNode(node, &status);
+	if (M_OK2)
+	{
+		// Could just create a CharString...
+
+		NameChangeHeader nameChange;
+		nameChange.newName = traNode.name(&status).asChar();
+		if (M_FAIL2)
+			return;
+
+		SectionHeader secHeader;
+		secHeader.header = NAME_CHANGE;
+		secHeader.name = prevName.asChar();
+		secHeader.messageLength = sizeof(NameChangeHeader);
+
+		producerBuffer->Send((char*)&nameChange, &secHeader);
+	}
+}
+
 void iterateScene()
 {
+	MCallbackId id;
+
+	// MESHES
 	MItDag meshIterator(MItDag::kBreadthFirst, MFn::kMesh, &status);
 	for (; !meshIterator.isDone(); meshIterator.next())
 	{
 		MFnDependencyNode dgNode(meshIterator.currentItem(), &status);
-		MCallbackId id;
 		std::string name = dgNode.name().asChar();
+
 		MObject node(meshIterator.currentItem());
-
-		cout << name << endl;
-
-		// MESHES
+		
 		if (node.hasFn(MFn::kMesh))
 		{
-			cout << "hej" << endl;
-			id = MNodeMessage::addNodeDirtyPlugCallback(node, meshDirtyPlug, nullptr, &status);
-			if (M_OK2)
-				addCallback(name + "DirtyPlug", id);
-
 			id = MPolyMessage::addPolyTopologyChangedCallback(node, meshTopoChanged, nullptr, &status);
 			if (M_OK2)
 				addCallback(name + "TopoChanged", id);
@@ -376,28 +400,29 @@ void iterateScene()
 			id = MNodeMessage::addNodeDirtyPlugCallback(node, materialDirtyPlug, nullptr, &status);
 			if (M_OK2)
 				addCallback(name + "DirtyMaterialPlug", id);
+
+
+			if (!sendMesh(node, producerBuffer))
+				std::cout << name << " | Failed creating mesh...\n";
 		}
 	}
 
+	// TRANSFORMS
 	MItDag transIterator(MItDag::kBreadthFirst, MFn::kTransform, &status);
 	for (; !transIterator.isDone(); transIterator.next())
 	{
 		MFnDependencyNode dgNode(transIterator.currentItem(), &status);
-		MCallbackId id;
 		std::string name = dgNode.name().asChar();
 		MObject node(transIterator.currentItem());
-
-		cout << name << endl;
-
-		// TRANSFORMS
-		MFnMesh mesh(transIterator.currentItem(), &status);
-		MObject transNode(mesh.parent(0));
+		
 		if (node.hasFn(MFn::kTransform))
 		{
-			cout << "hej doo" << endl;
 			id = MNodeMessage::addAttributeChangedCallback(node, transformAttributeChanged, NULL, &status);
 			if (M_OK2)
 				addCallback(name + "TranformChanged", id);
+
+			if (!SendTransformData(node, producerBuffer))
+				std::cout << name << " | Failed sending transform...\n";		
 		}
 	}
 
@@ -411,12 +436,23 @@ void iterateScene()
 		SendTransformData(camera.parent(0), producerBuffer);
 }
 
-void cameraMoved(const MString& str, void* clientData)
+void nodeRemoved(MObject& node, void* clientData)
 {
-	MString activePanel = MGlobal::executeCommandStringResult("getPanel -wf");
+	// Nodes created in Gameplay3D are based on the MFnTransform name
+	MFnTransform traNode(node, &status);
+	if (M_OK2)
+	{
+		SectionHeader secHeader;
+		secHeader.name = traNode.name(&status).asChar();
+		if (M_FAIL2)
+			return;
 
-	if (strcmp(str.asChar(), activePanel.asChar()) == 0)
-		sendCamera(M3dView::active3dView(), producerBuffer);
+		secHeader.header = NODE_DELETE;
+		secHeader.messageLength = 0;
+
+		producerBuffer->Send(nullptr, &secHeader);
+	}
+
 }
 
 void nodeAdded(MObject& node, void* clientData)
@@ -426,6 +462,10 @@ void nodeAdded(MObject& node, void* clientData)
 	{
 		MCallbackId id;
 		std::string name = dgNode.name().asChar();
+
+		id = MNodeMessage::addNameChangedCallback(node, nodeNameChange, nullptr, &status);
+		if (M_OK2)
+			addCallback(name + "NameChanged", id);
 
 		if (node.hasFn(MFn::kMesh))
 		{
@@ -488,6 +528,9 @@ EXPORT MStatus initializePlugin(MObject obj) {
 	if (M_OK2)
 		callbacks.insert({ "nodeCreationCB", callbackId });
 
+	callbackId = MDGMessage::addNodeRemovedCallback(nodeRemoved, "dependNode", nullptr, &status);
+	if (M_OK2)
+		callbacks.insert({ "nodeRemovedCB", callbackId });
 
 	// Cameras
 	callbackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel1", cameraMoved);

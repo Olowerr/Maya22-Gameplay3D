@@ -196,8 +196,29 @@ void MayaViewer::update(float elapsedTime)
 				}
 			}
 
-			if (_scene->getActiveCamera() != pCamera) // maybe if-statement unnecessary
+			if (_scene->getActiveCamera() != pCamera) // maybe if-statement is unnecessary...
 				_scene->setActiveCamera(pNode->getCamera());
+
+			break;
+		}
+		case NODE_DELETE:
+		{
+			Node* pNode = _scene->findNode(mainHeader->name);
+			if (pNode)
+				_scene->removeNode(pNode);
+
+			break;
+		}
+		case NAME_CHANGE:
+		{
+			Node* pNode = _scene->findNode(mainHeader->name);
+			if (pNode)
+			{
+				NameChangeHeader name;
+				memcpy(&name, msg, sizeof(NameChangeHeader));
+				pNode->setId(name.newName);
+			}
+			break;
 		}
 		}
 
@@ -209,7 +230,6 @@ void MayaViewer::update(float elapsedTime)
 		}
 
 	}
-
 
 	for (int i = 0; i < gModelCount; i++)
 	{

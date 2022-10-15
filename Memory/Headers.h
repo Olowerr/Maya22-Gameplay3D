@@ -3,14 +3,16 @@
 
 constexpr size_t MB = 1048576;
 
-enum Headers 
+enum Headers : unsigned int
 {
-	MESSAGE,
+	INVALID = 0,
 	MESH_NEW,
 	MESH_UPDATE,
 	TRANSFORM_DATA,
 	MATERIAL_DATA,
-	CAMERA_DATA
+	CAMERA_DATA,
+	NODE_DELETE,
+	NAME_CHANGE
 };
 
 struct Vertex
@@ -60,4 +62,9 @@ struct CameraHeader
 	float width;
 	float height;
 	float fieldOfView;
+};
+
+struct NameChangeHeader
+{
+	CharString newName;
 };

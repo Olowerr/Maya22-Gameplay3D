@@ -185,14 +185,21 @@ inline bool SendTransformData(const MObject& obj, Comlib* pComlib)
 	MFnTransform trans(obj, &status);
 	if (status == MS::kSuccess)
 	{
-		MFnDagNode dag(obj);
-		//cout << trans.name() << " new translation: " << trans.getTranslation(MSpace::kObject, &status) << endl;
-		//cout << trans.name() << " new transformation Matrix: " << trans.transformationMatrix() << endl;
+		MFnDagNode dag(obj, &status);
+		if (M_FAIL(status))
+			return false;
 
 		std::string name = trans.name(&status).asChar();
+		if (M_FAIL(status))
+			return false;
+
+		MDagPath path;
+		status = dag.getPath(path);
+		if (M_FAIL(status))
+			return false;
 
 		TransformDataHeader transHeader{};
-		trans.transformationMatrix().get(transHeader.transMtrx);
+		path.inclusiveMatrix().get(transHeader.transMtrx);
 
 		size_t transMsgLen = sizeof(TransformDataHeader) + 1;
 		char* msg = new char[transMsgLen];
@@ -277,6 +284,7 @@ inline bool sendCamera(M3dView view, Comlib* pComlib)
 
 	MDagPath camPath;
 	view.getCamera(camPath);
+
 	MFnCamera camera(camPath, &status);
 	if (M_FAIL(status))
 		return false;
@@ -287,7 +295,7 @@ inline bool sendCamera(M3dView view, Comlib* pComlib)
 
 	CameraHeader cameraData{};
 	
-	cameraData.fieldOfView = std::asin(camera.horizontalFieldOfView()) * (180.f / M_PI);
+	cameraData.fieldOfView = camera.horizontalFieldOfView() * (180.f / M_PI);
 	cameraData.perspective = !camera.isOrtho();
 
 	if (cameraData.perspective)
