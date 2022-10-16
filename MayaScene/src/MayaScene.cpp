@@ -372,18 +372,33 @@ void MayaViewer::recreateMesh(const MeshInfoHeader& header, void* pMeshData, con
 	Mesh* pMesh = createMesh(header, pMeshData);
 	if (!pMesh)
 	{
-		OutputDebugString(L"recreateMesh | Failed to update mesh...\n");
+		OutputDebugString(L"recreateMesh | Failed to create new mesh...\n");
+		return;
+	}
+
+	Model* pOldModel = dynamic_cast<Model*>(pNode->getDrawable());
+	if (!pOldModel)
+	{
+		OutputDebugString(L"recreateMesh | Failed to get old model...\n");
+		return;
+	}
+
+	Material* pMaterial = pOldModel->getMaterial();
+	if (!pMaterial)
+	{
+		OutputDebugString(L"recreateMesh | Failed to get material...\n");
 		return;
 	}
 
 	Model* pModel = Model::create(pMesh);
 	if (!pModel)
 	{
-		OutputDebugString(L"recreateMesh | Failed to create model...\n");
+		OutputDebugString(L"recreateMesh | Failed to create new model...\n");
 		return;
 	}
 
-	setMatDefaults(pModel);
+	//setMatDefaults(pModel);
+	pModel->setMaterial(pMaterial);
 	pNode->setDrawable(pModel);
 
 	SAFE_RELEASE(pMesh);

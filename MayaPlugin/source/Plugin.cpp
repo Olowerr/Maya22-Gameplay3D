@@ -453,6 +453,7 @@ void nodeRemoved(MObject& node, void* clientData)
 
 void nodeAdded(MObject& node, void* clientData)
 {
+	// Switch to MFnDagNode ? hmmmm	
 	MFnDependencyNode dgNode(node, &status);
 	if (M_OK2)
 	{
