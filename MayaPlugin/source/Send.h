@@ -125,6 +125,11 @@ inline bool sendMesh(const MObject& node, Comlib* pComlib)
 		We simply first allocate the total bytes needed,
 		and then cast & offset the pointer to whichever type we're using.
 		This way we can directly write to the memory that the Comlib will copy and send.
+
+		The memory allocated is being used according to the following structure:
+		MeshInfoHeader
+		Vertex (all vertices)
+		int (all indices)
 	*/
 
 
@@ -153,16 +158,16 @@ inline bool sendMesh(const MObject& node, Comlib* pComlib)
 		vertexIterator.getUV(uv);
 		vertexIterator.getNormal(normal);
 
-		pVertex[i].position[0] = position.x;
-		pVertex[i].position[1] = position.y;
-		pVertex[i].position[2] = position.z;
+		pVertex[i].position[0] = (float)position.x;
+		pVertex[i].position[1] = (float)position.y;
+		pVertex[i].position[2] = (float)position.z;
 
 		pVertex[i].uv[0] = uv[0];
 		pVertex[i].uv[1] = uv[1];
 
-		pVertex[i].normal[0] = normal.x;
-		pVertex[i].normal[1] = normal.y;
-		pVertex[i].normal[2] = normal.z;
+		pVertex[i].normal[0] = (float)normal.x;
+		pVertex[i].normal[1] = (float)normal.y;
+		pVertex[i].normal[2] = (float)normal.z;
 
 		pVertex[i].tangent[0] = tangents[i].x;
 		pVertex[i].tangent[1] = tangents[i].y;
