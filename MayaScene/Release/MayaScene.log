@@ -1,0 +1,8 @@
+﻿  Comlib.cpp
+  Memory.cpp
+C:\Users\Oliver\source\repos\Maya22-Gameplay3D\Memory\Memory.cpp(24,105): warning C4267: 'argument': conversion from 'size_t' to 'DWORD', possible loss of data
+C:\Users\Oliver\source\repos\Maya22-Gameplay3D\Memory\Memory.cpp(31,117): warning C4267: 'argument': conversion from 'size_t' to 'DWORD', possible loss of data
+  Mutex.cpp
+  MayaScene.cpp
+C:\Users\Oliver\source\repos\Maya22-Gameplay3D\MayaScene\GamePlay-master\gameplay\src\PhysicsController.h(372,22): error C2059: syntax error: 'constant'
+C:\Users\Oliver\source\repos\Maya22-Gameplay3D\MayaScene\GamePlay-master\gameplay\src\PhysicsController.h(372,32): error C2238: unexpected token(s) preceding ';'

@@ -215,3 +215,8 @@ inline void printVector(const float2& vector)
 {
 	std::cout << "(" << vector[0] << ", " << vector[1] << ")\n";
 }
+
+inline void printVector(const MFloatVector& vector)
+{
+	std::cout << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")\n";
+}

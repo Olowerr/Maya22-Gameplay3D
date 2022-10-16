@@ -337,7 +337,7 @@ void MayaViewer::setMaterial(const MaterialDataHeader& header, void* pMatdata, c
 
 void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName)
 {
-	Mesh* pMesh = createMesh(header, msg + sizeof(MeshInfoHeader));
+	Mesh* pMesh = createMesh(header, pMeshData);
 	if (!pMesh)
 	{
 		OutputDebugString(L"createNode | Failed to create mesh...\n");
@@ -574,22 +574,31 @@ Material* MayaViewer::createMaterial(const MaterialDataHeader& header, void* pMa
 
 Mesh* MayaViewer::createMesh(const MeshInfoHeader& info, void* data)
 {
+	std::vector<Vertex> verts(info.numVertex);
+	std::vector<int> inds(info.numIndex);
+
+	memcpy(verts.data(), data, sizeof(Vertex) * verts.size());
+	memcpy(inds.data(), (char*)data + sizeof(Vertex) * verts.size(), sizeof(int) * inds.size());
+
 	VertexFormat::Element elements[] =
 	{
 		VertexFormat::Element(VertexFormat::POSITION, 3),
 		VertexFormat::Element(VertexFormat::TEXCOORD0, 2),
 		VertexFormat::Element(VertexFormat::NORMAL, 3),
-		//VertexFormat::Element(VertexFormat::TANGENT, 3),
-		//VertexFormat::Element(VertexFormat::BINORMAL, 3),
+		VertexFormat::Element(VertexFormat::TANGENT, 3),
+		VertexFormat::Element(VertexFormat::BINORMAL, 3),
 	};
-	Mesh* mesh = Mesh::createMesh(VertexFormat(elements, 3), info.numVertex, true);
+
+	Mesh* mesh = Mesh::createMesh(VertexFormat(elements, 5), info.numVertex, true);
 	if (mesh == NULL)
 	{
 		GP_ERROR("createMesh | Failed to create mesh.");
 		return NULL;
 	}
+
 	mesh->setVertexData(data, 0, info.numVertex);
-	//MeshPart* meshPart = mesh->addPart(Mesh::TRIANGLES, Mesh::, indexCount, true);
-	//meshPart->setIndexData(indices, 0, indexCount);
+
+	MeshPart* meshPart = mesh->addPart(Mesh::TRIANGLES, Mesh::IndexFormat::INDEX32, info.numIndex, true);
+	meshPart->setIndexData((char*)data + sizeof(Vertex) * info.numVertex, 0, info.numIndex);
 	return mesh;
 }

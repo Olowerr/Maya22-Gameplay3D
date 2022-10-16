@@ -11,7 +11,8 @@ inline bool sendMesh(const MObject& node, Comlib* pComlib)
 	MFnMesh mesh(node, &status);
 	if (M_FAIL(status))
 		return false;
-	
+
+	// MFnTransform name is used in Gameplay3D
 	MFnDagNode dag(mesh.parent(0), &status);
 	if (M_FAIL(status))
 		return false;
@@ -20,6 +21,175 @@ inline bool sendMesh(const MObject& node, Comlib* pComlib)
 	if (M_FAIL(status))
 		return false;
 
+#define SWITCH 1
+
+#if SWITCH == 0
+	MItMeshFaceVertex it2(node, &status);
+	if (M_FAIL2)
+		return false;
+
+	MIntArray xTrianglesPerFace, index;
+	MStatus a = mesh.getTriangleOffsets(xTrianglesPerFace, index);
+
+	printIntArray(xTrianglesPerFace);
+
+	MFloatVectorArray tangents, biNormals;
+	mesh.getTangents(tangents);
+	mesh.getBinormals(biNormals);
+
+	std::vector<Vertex> verts;
+	verts.reserve(index.length());
+
+	MPoint position;
+	float2 uv;
+	MVector normal;
+
+	for (int i = 0; !it2.isDone(); it2.next(), i++)
+	{
+		position = it2.position();
+		it2.getUV(uv);
+		it2.getNormal(normal);
+
+		verts.emplace_back();
+		verts[i].position[0] = position.x;
+		verts[i].position[1] = position.y;
+		verts[i].position[2] = position.z;
+
+		verts[i].uv[0]		 = uv[0];
+		verts[i].uv[1]		 = uv[1];
+
+		verts[i].normal[0]   = normal.x;
+		verts[i].normal[1]   = normal.y;
+		verts[i].normal[2]   = normal.z;
+
+		verts[i].tangent[0]	 = tangents[i].x;
+		verts[i].tangent[1]	 = tangents[i].y;
+		verts[i].tangent[2]	 = tangents[i].z;
+
+		verts[i].biNormal[0] = biNormals[i].x;
+		verts[i].biNormal[1] = biNormals[i].y;
+		verts[i].biNormal[2] = biNormals[i].z;
+	}
+	
+	MeshInfoHeader meshInfo{ (unsigned int)verts.size(), index.length() };
+
+	const size_t SIZE = sizeof(MeshInfoHeader) + sizeof(Vertex) * verts.size() + sizeof(int) * index.length();
+	char* pData = (char*)malloc(SIZE);
+
+	if (!pData)
+		return false;
+
+	size_t offset = 0;
+
+	memcpy(pData, &meshInfo, sizeof(MeshInfoHeader));
+	offset += sizeof(MeshInfoHeader);
+
+	memcpy(pData + offset, verts.data(), sizeof(Vertex) * verts.size());
+	offset += sizeof(Vertex) * verts.size();
+
+	index.get((int*)(pData + offset));
+
+	SectionHeader secHeader;
+	secHeader.header = MESH_NEW;
+	secHeader.name = nodeName;
+	secHeader.messageLength = SIZE;
+
+	pComlib->Send(pData, &secHeader);
+
+	free(pData);
+
+	return true;
+	
+
+#elif SWITCH == 1
+
+	MItMeshFaceVertex vertexIterator(node, &status);
+	if (M_FAIL(status))
+		return false;
+
+
+	MIntArray xTrianglesPerFace, index;
+	MFloatVectorArray tangents, biNormals;
+	
+	MStatus triStatus = mesh.getTriangleOffsets(xTrianglesPerFace, index);
+	MStatus tangStatus = mesh.getTangents(tangents);
+	MStatus biNormStatus = mesh.getBinormals(biNormals);
+
+	if (M_FAIL(triStatus) || M_FAIL(tangStatus) || M_FAIL(biNormStatus))
+		return false;
+
+	/*
+		To avoid unnecessary allocations,
+		such as dynamially allocating a Vertex- and int- array,
+		and then copying the data from the arrays to pMessage (the memory which Comlib will send).
+		We simply first allocate the total bytes needed,
+		and then cast & offset the pointer to whichever type we're using.
+		This way we can directly write to the memory that the Comlib will copy and send.
+	*/
+
+
+	MeshInfoHeader meshHeader{ 0, index.length() };
+	for (; !vertexIterator.isDone(); vertexIterator.next())
+		meshHeader.numVertex++;
+
+	const size_t SIZE = sizeof(MeshInfoHeader) + sizeof(Vertex) * meshHeader.numVertex + sizeof(int) * meshHeader.numIndex;
+	char* pMessage = (char*)malloc(SIZE);
+	if (!pMessage)
+		return false;
+
+	size_t offset = 0, numBytes = SIZE - (sizeof(Vertex) * meshHeader.numVertex + sizeof(int) * meshHeader.numIndex);
+	memcpy(pMessage, &meshHeader, numBytes);
+	offset += sizeof(MeshInfoHeader);
+
+	MPoint position;
+	float2 uv;
+	MVector normal;
+	Vertex* pVertex = (Vertex*)(pMessage + offset);
+
+	vertexIterator.reset();
+	for (int i = 0; !vertexIterator.isDone(); vertexIterator.next(), i++)
+	{
+		position = vertexIterator.position();
+		vertexIterator.getUV(uv);
+		vertexIterator.getNormal(normal);
+
+		pVertex[i].position[0] = position.x;
+		pVertex[i].position[1] = position.y;
+		pVertex[i].position[2] = position.z;
+
+		pVertex[i].uv[0] = uv[0];
+		pVertex[i].uv[1] = uv[1];
+
+		pVertex[i].normal[0] = normal.x;
+		pVertex[i].normal[1] = normal.y;
+		pVertex[i].normal[2] = normal.z;
+
+		pVertex[i].tangent[0] = tangents[i].x;
+		pVertex[i].tangent[1] = tangents[i].y;
+		pVertex[i].tangent[2] = tangents[i].z;
+
+		pVertex[i].biNormal[0] = biNormals[i].x;
+		pVertex[i].biNormal[1] = biNormals[i].y;
+		pVertex[i].biNormal[2] = biNormals[i].z;
+	}
+
+	offset += sizeof(Vertex) * meshHeader.numVertex;
+	index.get((int*)(pMessage + offset));
+
+
+	SectionHeader secHeader;
+	secHeader.header = MESH_NEW;
+	secHeader.name = nodeName;
+	secHeader.messageLength = SIZE;
+
+	pComlib->Send(pMessage, &secHeader);
+
+	free(pMessage);
+
+	return true;
+
+
+#else
 
 
 	// Indices
@@ -95,6 +265,8 @@ inline bool sendMesh(const MObject& node, Comlib* pComlib)
 	pComlib->Send((char*)pData, &secHeader);
 
 	free(pData);
+
+#endif
 
 	return true;
 }

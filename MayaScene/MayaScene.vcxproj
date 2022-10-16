@@ -155,8 +155,8 @@ xcopy ..\..\..\GamePlay-master\gameplay\res\ui res\ui\* /s /y /d</Command>
       </Outputs>
     </CustomBuildStep>
     <PreBuildEvent>
-      <Command>xcopy ..\..\..\GamePlay-master\gameplay\res\shaders res\shaders\* /s /y /d
-xcopy ..\..\..\GamePlay-master\gameplay\res\ui res\ui\* /s /y /d</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -20,6 +20,8 @@ struct Vertex
 	float position[3];
 	float uv[2];
 	float normal[3];
+	float tangent[3];
+	float biNormal[3];
 };
 
 struct SectionHeader
@@ -35,7 +37,7 @@ struct SectionHeader
 struct MeshInfoHeader
 {
 	unsigned int numVertex;
-	//unsigned int numIndex;
+	unsigned int numIndex;
 };
 
 struct MeshUpdateHeader
