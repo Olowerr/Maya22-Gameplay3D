@@ -70,6 +70,8 @@ private:
     SectionHeader* mainHeader;
 
     std::unordered_map<std::string, Material*> materials;
+    // broh
+    std::unordered_map<std::string, bool> colored;
 
     /**
      * Draws the scene each frame.
@@ -86,6 +88,7 @@ private:
    // void setMaterial(const TextureDataHeader& header, const char* nodeName);
     void setShadingParameters(Material* pModel);
 
+    void setDefaultMat(Model* pModel);
 
     void createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
     void recreateMesh(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
@@ -97,6 +100,9 @@ private:
 
     // temp
     Light* light;
+
+    Technique* colour;
+    Technique* texture;
 
 };
 

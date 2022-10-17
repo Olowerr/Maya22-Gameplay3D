@@ -14,7 +14,8 @@ enum Headers : unsigned int
 	NODE_DELETE,
 	NAME_CHANGE,
 	COLOR_TEXTURE,
-	NORMAL_TEXTURE
+	NORMAL_TEXTURE,
+	MESH_MATERIAL
 };
 
 struct Vertex
@@ -61,6 +62,11 @@ struct MaterialDataHeader
 struct TextureDataHeader
 {
 	CharString path;
+};
+
+struct MeshMaterialHeader
+{
+	CharString materialName;
 };
 
 struct CameraHeader

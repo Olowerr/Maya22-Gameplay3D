@@ -411,40 +411,6 @@ inline bool SendTransformData(const MObject& obj, Comlib* pComlib)
 	return false;
 }
 
-inline bool SendMaterialData(MFnLambertShader& shader, Comlib* pComlib)
-{
-	MStatus status;
-
-	const char* nodeName = shader.name(&status).asChar();
-	if (status == MS::kSuccess)
-	{
-		MaterialDataHeader matHeader{};
-		matHeader.color[0] = shader.color().r;
-		matHeader.color[1] = shader.color().g;
-		matHeader.color[2] = shader.color().b;
-		matHeader.color[3] = shader.color().a;
-
-		size_t matMsgLen = sizeof(MaterialDataHeader) + 1;
-		char* msg = new char[matMsgLen];
-		size_t offset = 0;
-
-		memcpy(msg + offset, &matHeader, sizeof(MaterialDataHeader));
-
-		SectionHeader secHeader;
-		secHeader.name = nodeName;
-		secHeader.header = MATERIAL_DATA;
-		secHeader.messageLength = matMsgLen;
-		secHeader.messageID = 0;
-		pComlib->Send(msg, &secHeader);
-
-		delete[]msg;
-
-		return true;
-	}
-
-	return false;
-}
-
 inline bool sendCamera(M3dView view, Comlib* pComlib)
 {
 	MStatus status;
@@ -489,14 +455,48 @@ inline bool sendCamera(M3dView view, Comlib* pComlib)
 	return true;
 }
 
-inline bool sendColorTexture(MObject& textureNode, const char* materialName, Comlib* pComlib)
+inline bool sendColorValues(const MFnLambertShader& shader, const char* materialName, Comlib* pComlib)
+{
+	MStatus status;
+
+	const char* nodeName = shader.name(&status).asChar();
+	if (status == MS::kSuccess)
+	{
+		MaterialDataHeader matHeader{};
+		matHeader.color[0] = shader.color().r;
+		matHeader.color[1] = shader.color().g;
+		matHeader.color[2] = shader.color().b;
+		matHeader.color[3] = shader.color().a;
+
+		size_t matMsgLen = sizeof(MaterialDataHeader) + 1;
+		char* msg = new char[matMsgLen];
+		size_t offset = 0;
+
+		memcpy(msg + offset, &matHeader, sizeof(MaterialDataHeader));
+
+		SectionHeader secHeader;
+		secHeader.name = nodeName;
+		secHeader.header = MATERIAL_DATA;
+		secHeader.messageLength = matMsgLen;
+		secHeader.messageID = 0;
+		pComlib->Send(msg, &secHeader);
+
+		std::cout << "Sent colour | " << materialName << std::endl;
+
+		delete[]msg;
+
+		return true;
+	}
+
+	return false;
+}
+
+inline bool sendColorTexture(const MObject& textureNode, const char* materialName, Comlib* pComlib)
 {
 	MFnDependencyNode texture(textureNode);
 	MPlug file = texture.findPlug("ftn", false);
 	MString filename;
 	file.getValue(filename);
-
-	std::cout << "path: " << filename << std::endl;
 
 	TextureDataHeader colorTexture{ filename.asChar() };
 
@@ -506,6 +506,8 @@ inline bool sendColorTexture(MObject& textureNode, const char* materialName, Com
 	secHeader.name = materialName;
 
 	pComlib->Send((char*)&colorTexture, &secHeader);
+
+	std::cout << "Sent colour texture | " << materialName << std::endl;
 
 	return true;
 }
@@ -517,8 +519,6 @@ inline bool sendNormalTexture(MObject& textureNode, const char* materialName, Co
 	MString filename;
 	file.getValue(filename);
 
-	std::cout << "path: " << filename << std::endl;
-
 	TextureDataHeader colorTexture{ filename.asChar() };
 
 	SectionHeader secHeader;
@@ -528,5 +528,155 @@ inline bool sendNormalTexture(MObject& textureNode, const char* materialName, Co
 
 	pComlib->Send((char*)&colorTexture, &secHeader);
 
+	std::cout << "Sent normal texture | "<< materialName<<std::endl;
+
 	return true;
+}
+
+inline bool SendMaterialData(const MFnDependencyNode& material, Comlib* pComlib)
+{
+	MStatus status;
+
+	MObject node = material.object();
+
+	if (material.object().hasFn(MFn::kLambert))
+	{
+		MFnLambertShader tempLamb(node, &status);
+		if (M_FAIL(status))
+			return false;
+
+		const char* matName = tempLamb.name().asChar();
+
+		MPlugArray lambertCon;
+		MPlug lambertPlug = tempLamb.findPlug("color", false);
+		lambertPlug.connectedTo(lambertCon, true, false);
+		bool hasTexture = false;
+
+		if (lambertCon.length() > 0)
+		{
+			MObject obj(lambertCon[0].node());
+			if (obj.hasFn(MFn::kFileTexture))
+			{
+				sendColorTexture(obj, matName, pComlib);
+				hasTexture = true;
+			}
+		}
+
+		MPlug normPlug = tempLamb.findPlug("normalCamera", false);
+		normPlug.connectedTo(lambertCon, true, false);
+
+		if (lambertCon.length() > 0)
+		{
+			if (lambertCon[0].node().hasFn(MFn::kBump))
+			{
+				MFnDependencyNode bump(lambertCon[0].node());
+
+				MPlug bumpPlug = bump.findPlug("bumpValue", false);
+				bumpPlug.connectedTo(lambertCon, true, false);
+
+				if (lambertCon.length() > 0)
+				{
+					MObject obj(lambertCon[0].node());
+					if (obj.hasFn(MFn::kFileTexture))
+					{
+						sendNormalTexture(obj, matName, pComlib);
+						hasTexture = true;
+					}
+				}
+			}
+		}
+
+		if (!hasTexture)
+		{
+			tempLamb.hasAttribute("Color", &status);
+			if (M_OK(status))
+			{
+				sendColorValues(tempLamb, matName, pComlib);
+			}
+		}
+	}
+
+	return true;
+}
+
+inline bool sendAttachedMaterial(const char* materialName, const char* nodeName, Comlib* pComlib)
+{
+	MStatus status;
+
+	MeshMaterialHeader header;
+	header.materialName = materialName;
+
+	SectionHeader secHeader;
+	secHeader.name = nodeName;
+	secHeader.messageLength = sizeof(MeshMaterialHeader);
+	secHeader.header = MESH_MATERIAL;
+
+	pComlib->Send((char*)&header, &secHeader);
+
+	return true;
+}
+
+inline MObject getMaterial(const MObject& node)
+{
+	MStatus status;
+	MFnDependencyNode dgNode(node, &status);
+	std::cout << "G 0" << "\n";
+	if (M_FAIL(status))
+		return MObject();
+
+	std::cout << dgNode.name() << "\n";
+
+	std::cout << "G 0.25" << "\n";
+	
+	MPlug plug = dgNode.findPlug("instObjGroups", true);
+	if (M_FAIL(status))
+		return MObject();
+
+	std::cout <<"num: " << plug.numChildren() << "\n";
+	std::cout <<"num2: " << plug.numConnectedChildren() << "\n";
+
+	for (int i = 0; i < plug.numChildren(); i++)
+	{
+		MPlug a = plug.child(i, &status);
+		if (M_FAIL(status))
+			std::cout << "Failed\n";
+		else
+			std::cout << a.name() << "\n";
+
+	}
+
+	std::cout << "G 0.5" << "\n";
+
+	MPlugArray connections;
+	plug.connectedTo(connections, false, true, &status);
+	if (M_FAIL(status))
+		return MObject();
+	std::cout << "G 1" << "\n";
+
+	for (unsigned int i = 0; i < connections.length(); i++)
+	{
+		if (!connections[i].node().hasFn(MFn::kShadingEngine))
+			continue;
+		std::cout << "G 2" << "\n";
+
+		MFnDependencyNode shadingNode(connections[i], &status);
+		if (M_FAIL(status))
+			continue;
+		std::cout << "G 3" << "\n";
+
+		MPlugArray shadingConnections;
+		MPlug shaderPlug = shadingNode.findPlug("surfaceShader", false);
+		shaderPlug.connectedTo(shadingConnections, true, false, &status);
+		std::cout << "G 4" << "\n";
+		if (M_FAIL2)
+			continue;
+
+		for (unsigned int j = 0; j < shadingConnections.length(); j++)
+		{
+			if (shadingConnections[i].node().hasFn(MFn::kLambert))
+				return shadingConnections[j].node();
+		}
+	}
+
+	return MObject();
 }

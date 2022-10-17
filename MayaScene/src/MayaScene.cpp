@@ -155,6 +155,21 @@ void MayaViewer::update(float elapsedTime)
 
 			delete[]transStr;*/
 		}
+		case MESH_MATERIAL:
+		{
+			MeshMaterialHeader header;
+			memcpy(&header, msg, sizeof(MeshMaterialHeader));
+			Node* pNode = _scene->findNode(mainHeader->name);
+			if (!pNode)
+				break;
+
+			Model* pModel = dynamic_cast<Model*>(pNode->getDrawable());
+			if (!pModel)
+				break;
+
+			pModel->setMaterial(materials[header.materialName.cStr]);
+
+		}
 		case MATERIAL_DATA:
 		{
 			MaterialDataHeader matHeader;
@@ -166,6 +181,18 @@ void MayaViewer::update(float elapsedTime)
 		}
 		case COLOR_TEXTURE:
 		{
+			TextureDataHeader matHeader;
+			memcpy(&matHeader, msg, sizeof(MaterialDataHeader));
+
+			setMaterial(matHeader, mainHeader->name);
+
+			break;
+		}
+		case NORMAL_TEXTURE:
+		{
+			// temp
+			break;
+
 			TextureDataHeader matHeader;
 			memcpy(&matHeader, msg, sizeof(MaterialDataHeader));
 
@@ -281,6 +308,22 @@ void MayaViewer::setShadingParameters(Material* pMaterial)
 	pMaterial->getStateBlock()->setDepthWrite(true);
 }
 
+void MayaViewer::setDefaultMat(Model* pModel)
+{
+
+	Material* pMat = pModel->setMaterial("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
+	pMat->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
+	pMat->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
+	pMat->getParameter("u_ambientColor")->setValue(Vector3(0.4f, 0.1f, 1.f));
+	pMat->getParameter("u_diffuseColor")->setValue(Vector4(0.1f, 1.f, 1.f, 1.f));
+	pMat->getParameter("u_pointLightColor[0]")->setValue(light->getColor());
+	pMat->getParameter("u_pointLightPosition[0]")->bindValue(light->getNode(), &Node::getTranslationWorld);
+	pMat->getParameter("u_pointLightRangeInverse[0]")->bindValue(light, &Light::getRangeInverse);
+	pMat->getStateBlock()->setCullFace(true);
+	pMat->getStateBlock()->setDepthTest(true);
+	pMat->getStateBlock()->setDepthWrite(true);
+}
+
 void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName)
 {
 	Mesh* pMesh = createMesh(header, pMeshData);
@@ -299,7 +342,8 @@ void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const
 		return;
 	}
 
-	setMatDefaults(pModel);
+	//setDefaultMat(pModel);
+	pModel->setMaterial(materials["lambert1"]);
 	
 	pNode->setDrawable(pModel);
 	SAFE_RELEASE(pMesh);
@@ -550,23 +594,74 @@ void MayaViewer::setMaterial(const MaterialDataHeader& header, const char* mater
 
 	if (!materials.count(materialName))
 	{
-		materials[materialName]->create("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
+		materials[materialName] = Material::create("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
+		colored[materialName] = true;
+	}
+	else
+	{
+		if (!colored[materialName])
+		{
+			Material* pOldMat = materials[materialName];
+			pOldMat->release();
+
+			materials[materialName] = Material::create("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
+			colored[materialName] = true;
+
+			std::vector<Node*> nodes;
+			_scene->findNodes("", nodes, true, false);
+
+			for (Node* pNode : nodes)
+			{
+				if (Model* pModel = (Model*)pNode->getDrawable())
+				{
+					if (pModel->getMaterial() == pOldMat)
+						pModel->setMaterial(materials[materialName]);
+				}
+			}
+
+		}
 	}
 
-	materials[materialName]->getParameter("u_diffuseColor")->setValue(color);
 	setShadingParameters(materials[materialName]);
+	materials[materialName]->getParameter("u_diffuseColor")->setValue(color);
 }
 
 void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materialName)
 {
 	if (!materials.count(materialName))
 	{
-		materials[materialName]->create("res/shaders/textured.vert", "res/shaders/textured.frag", "POINT_LIGHT_COUNT 1");
+		materials[materialName] = Material::create("res/shaders/textured.vert", "res/shaders/textured.frag", "POINT_LIGHT_COUNT 1");
+		colored[materialName] = false;
 	}
-	Texture::Sampler* pSampler = materials[materialName]->getParameter("u_diffuseTexture")->setValue(header.path.cStr, true);
-	pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+	else
+	{
+		if (colored[materialName])
+		{
+			Material* pOldMat = materials[materialName];
+			pOldMat->release();
+
+			materials[materialName] = Material::create("res/shaders/textured.vert", "res/shaders/textured.frag", "POINT_LIGHT_COUNT 1");
+			colored[materialName] = false;
+
+			std::vector<Node*> nodes;
+			_scene->findNodes("", nodes, true, false);
+
+			for (Node* pNode : nodes)
+			{
+				if (Model* pModel = dynamic_cast<Model*>(pNode->getDrawable()))
+				{
+					if (pModel->getMaterial() == pOldMat)
+						pModel->setMaterial(materials[materialName]);
+				}
+			}
+
+		}
+	}
 
 	setShadingParameters(materials[materialName]);
+
+	Texture::Sampler* pSampler = materials[materialName]->getParameter("u_diffuseTexture")->setValue(header.path.cStr, true);
+	pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
 }
 
 Mesh* MayaViewer::createMesh(const MeshInfoHeader& info, void* data)
