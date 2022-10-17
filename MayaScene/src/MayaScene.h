@@ -79,11 +79,14 @@ private:
     // Helpers
     Mesh* createMesh(const MeshInfoHeader& info, void* data);
 	Mesh* createCubeMesh(float size = 1.0f);
-	Material* createMaterial(const MaterialDataHeader& header, void* pMatdata, const char* nodeName);
+
+	void setMaterial(const MaterialDataHeader& header, const char* materialName);
+	void setMaterial(const TextureDataHeader& header, const char* materialName);
+   // void setMaterial(const MaterialDataHeader& header, const char* nodeName);
+   // void setMaterial(const TextureDataHeader& header, const char* nodeName);
+    void setShadingParameters(Material* pModel);
 
 
-    void setMatDefaults(Model* pModel);
-    void setMaterial(const MaterialDataHeader& header, void* pMatdata, const char* nodeName);
     void createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
     void recreateMesh(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
     void updateMesh(const MeshUpdateHeader& header, const char* nodeName);

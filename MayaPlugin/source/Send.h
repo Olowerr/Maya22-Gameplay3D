@@ -411,26 +411,13 @@ inline bool SendTransformData(const MObject& obj, Comlib* pComlib)
 	return false;
 }
 
-inline bool SendMaterialData(MFnLambertShader& shader, Comlib* pComlib, const MObject& node)
+inline bool SendMaterialData(MFnLambertShader& shader, Comlib* pComlib)
 {
 	MStatus status;
-	MFnMesh mesh(node, &status);
-	if (M_FAIL(status))
-		return false;
 
-	MFnDagNode dag(mesh.parent(0), &status);
-	if (M_FAIL(status))
-		return false;
-
-
-	if (M_FAIL(status))
-		return false;
-
-	const char* nodeName = dag.name(&status).asChar();
+	const char* nodeName = shader.name(&status).asChar();
 	if (status == MS::kSuccess)
 	{
-		std::cout << nodeName << std::endl;
-
 		MaterialDataHeader matHeader{};
 		matHeader.color[0] = shader.color().r;
 		matHeader.color[1] = shader.color().g;
@@ -498,6 +485,48 @@ inline bool sendCamera(M3dView view, Comlib* pComlib)
 	secHeader.header = Headers::CAMERA_DATA;
 
 	pComlib->Send((char*)&cameraData, &secHeader);
+
+	return true;
+}
+
+inline bool sendColorTexture(MObject& textureNode, const char* materialName, Comlib* pComlib)
+{
+	MFnDependencyNode texture(textureNode);
+	MPlug file = texture.findPlug("ftn", false);
+	MString filename;
+	file.getValue(filename);
+
+	std::cout << "path: " << filename << std::endl;
+
+	TextureDataHeader colorTexture{ filename.asChar() };
+
+	SectionHeader secHeader;
+	secHeader.header = COLOR_TEXTURE;
+	secHeader.messageLength = sizeof(SectionHeader);
+	secHeader.name = materialName;
+
+	pComlib->Send((char*)&colorTexture, &secHeader);
+
+	return true;
+}
+
+inline bool sendNormalTexture(MObject& textureNode, const char* materialName, Comlib* pComlib)
+{
+	MFnDependencyNode texture(textureNode);
+	MPlug file = texture.findPlug("ftn", false);
+	MString filename;
+	file.getValue(filename);
+
+	std::cout << "path: " << filename << std::endl;
+
+	TextureDataHeader colorTexture{ filename.asChar() };
+
+	SectionHeader secHeader;
+	secHeader.header = NORMAL_TEXTURE;
+	secHeader.messageLength = sizeof(SectionHeader);
+	secHeader.name = materialName;
+
+	pComlib->Send((char*)&colorTexture, &secHeader);
 
 	return true;
 }

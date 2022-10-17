@@ -12,7 +12,9 @@ enum Headers : unsigned int
 	MATERIAL_DATA,
 	CAMERA_DATA,
 	NODE_DELETE,
-	NAME_CHANGE
+	NAME_CHANGE,
+	COLOR_TEXTURE,
+	NORMAL_TEXTURE
 };
 
 struct Vertex

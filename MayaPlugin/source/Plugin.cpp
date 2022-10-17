@@ -172,7 +172,7 @@ void materialDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 			lambert.hasAttribute("Color", &status);
 			if (M_OK2)
 			{
-				SendMaterialData(lambert, producerBuffer, plug.node());
+				SendMaterialData(lambert, producerBuffer);
 			}
 		}
 	}
@@ -207,11 +207,7 @@ void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 						MObject obj(lambertCon[i].node());
 						if (obj.hasFn(MFn::kFileTexture))
 						{
-							MFnDependencyNode texture(obj);
-							MPlug file = texture.findPlug("ftn", false);
-							MString filename;
-							file.getValue(filename);
-							std::cout << filename << std::endl;
+							sendColorTexture(obj, material.name().asChar(), producerBuffer);
 							hasTexture = true;
 						}
 					}
@@ -223,12 +219,8 @@ void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 					{
 						MObject obj(lambertCon[i].node());
 						if (obj.hasFn(MFn::kFileTexture))
-						{
-							MFnDependencyNode texture(obj);
-							MPlug file = texture.findPlug("ftn", false);
-							MString filename;
-							file.getValue(filename);
-							std::cout << filename << std::endl;
+						{	
+							sendNormalTexture(obj, material.name().asChar(), producerBuffer);	
 							hasTexture = true;
 						}
 					}
@@ -239,7 +231,7 @@ void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 						tempLamb.hasAttribute("Color", &status);
 						if (M_OK2)
 						{
-							SendMaterialData(tempLamb, producerBuffer, plug.node());
+							SendMaterialData(tempLamb, producerBuffer);
 						}
 					}
 				}
@@ -462,6 +454,19 @@ void iterateScene()
 
 				if (!SendTransformData(node, producerBuffer))
 					std::cout << name << " | Failed sending transform...\n";
+			}
+		}
+	}
+
+	MItDependencyNodes matIterator(MFn::kLambert, &status);
+	if (M_OK2)
+	{
+		for (; !matIterator.isDone(); matIterator.next())
+		{
+			MFnLambertShader lambert(matIterator.thisNode(), &status);
+			if (M_OK2)
+			{
+				SendMaterialData(lambert, producerBuffer);
 			}
 		}
 	}

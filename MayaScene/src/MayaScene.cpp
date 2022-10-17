@@ -160,10 +160,17 @@ void MayaViewer::update(float elapsedTime)
 			MaterialDataHeader matHeader;
 			memcpy(&matHeader, msg, sizeof(MaterialDataHeader));
 
-			if (_scene->findNode(mainHeader->name))
-				setMaterial(matHeader, msg + sizeof(MaterialDataHeader), mainHeader->name);
-			else
-				OutputDebugString(L"MATERIAL_DATA | Could not find node...\n");
+			setMaterial(matHeader, mainHeader->name);
+			
+			break;
+		}
+		case COLOR_TEXTURE:
+		{
+			TextureDataHeader matHeader;
+			memcpy(&matHeader, msg, sizeof(MaterialDataHeader));
+
+			setMaterial(matHeader, mainHeader->name);
+
 			break;
 		}
 		case CAMERA_DATA:
@@ -261,50 +268,17 @@ bool MayaViewer::drawScene(Node* node)
     return true;
 }
 
-void MayaViewer::setMatDefaults(Model* pModel)
+void MayaViewer::setShadingParameters(Material* pMaterial)
 {
-	Material* pMat = pModel->setMaterial( "res/shaders/textured.vert", "res/shaders/textured.frag", "POINT_LIGHT_COUNT 1");
-	pMat->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
-	pMat->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
-	pMat->getParameter("u_ambientColor")->setValue(Vector3(0.2f, 0.2f, 0.2f));
-	pMat->getParameter("u_pointLightColor[0]")->setValue(light->getColor());
-	pMat->getParameter("u_pointLightPosition[0]")->bindValue(light->getNode(), &Node::getTranslationWorld);
-	pMat->getParameter("u_pointLightRangeInverse[0]")->bindValue(light, &Light::getRangeInverse);
-	pMat->getStateBlock()->setCullFace(true);
-	pMat->getStateBlock()->setDepthTest(true);
-	pMat->getStateBlock()->setDepthWrite(true);
-
-    Texture::Sampler* pSampler = pMat->getParameter("u_diffuseTexture")->setValue("res/png/crate.png", true);
-    pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
-}
-
-void MayaViewer::setMaterial(const MaterialDataHeader& header, void* pMatdata, const char* nodeName)
-{
-	Node* pNode = _scene->findNode(mainHeader->name);
-	if (!pNode)
-	{
-		OutputDebugString(L"Could not find node...\n");
-		return;
-	}
-	Model* pModel = dynamic_cast<Model*>(pNode->getDrawable());
-	if (!pModel)
-	{
-		OutputDebugString(L"Couldn't get drawble...\n");
-		return;
-	}
-	Vector4 color = header.color;
-
-	Material* pMat = pModel->setMaterial("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
-	pMat->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
-	pMat->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
-	pMat->getParameter("u_diffuseColor")->setValue(color);
-	pMat->getParameter("u_ambientColor")->setValue(Vector3(0.2f, 0.2f, 0.2f));
-	pMat->getParameter("u_pointLightColor[0]")->setValue(light->getColor());
-	pMat->getParameter("u_pointLightPosition[0]")->bindValue(light->getNode(), &Node::getTranslationWorld);
-	pMat->getParameter("u_pointLightRangeInverse[0]")->bindValue(light, &Light::getRangeInverse);
-	pMat->getStateBlock()->setCullFace(true);
-	pMat->getStateBlock()->setDepthTest(true);
-	pMat->getStateBlock()->setDepthWrite(true);
+	pMaterial->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
+	pMaterial->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
+	pMaterial->getParameter("u_ambientColor")->setValue(Vector3(0.2f, 0.2f, 0.2f));
+	pMaterial->getParameter("u_pointLightColor[0]")->setValue(light->getColor());
+	pMaterial->getParameter("u_pointLightPosition[0]")->bindValue(light->getNode(), &Node::getTranslationWorld);
+	pMaterial->getParameter("u_pointLightRangeInverse[0]")->bindValue(light, &Light::getRangeInverse);
+	pMaterial->getStateBlock()->setCullFace(true);
+	pMaterial->getStateBlock()->setDepthTest(true);
+	pMaterial->getStateBlock()->setDepthWrite(true);
 }
 
 void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName)
@@ -570,26 +544,29 @@ Mesh* MayaViewer::createCubeMesh(float size)
 	return mesh;
 }
 
-Material* MayaViewer::createMaterial(const MaterialDataHeader& header, void* pMatdata, const char* nodeName)
+void MayaViewer::setMaterial(const MaterialDataHeader& header, const char* materialName)
 {
 	Vector4 color = header.color;
 
-	if (!materials.count(nodeName))
+	if (!materials.count(materialName))
 	{
-		materials[nodeName]->create("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
+		materials[materialName]->create("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
 	}
-	materials[nodeName]->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
-	materials[nodeName]->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
-	materials[nodeName]->getParameter("u_diffuseColor")->setValue(color);
-	materials[nodeName]->getParameter("u_ambientColor")->setValue(Vector3(0.2f, 0.2f, 0.2f));
-	materials[nodeName]->getParameter("u_pointLightColor[0]")->setValue(light->getColor());
-	materials[nodeName]->getParameter("u_pointLightPosition[0]")->bindValue(light->getNode(), &Node::getTranslationWorld);
-	materials[nodeName]->getParameter("u_pointLightRangeInverse[0]")->bindValue(light, &Light::getRangeInverse);
-	materials[nodeName]->getStateBlock()->setCullFace(true);
-	materials[nodeName]->getStateBlock()->setDepthTest(true);
-	materials[nodeName]->getStateBlock()->setDepthWrite(true);
 
-	return materials[nodeName];
+	materials[materialName]->getParameter("u_diffuseColor")->setValue(color);
+	setShadingParameters(materials[materialName]);
+}
+
+void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materialName)
+{
+	if (!materials.count(materialName))
+	{
+		materials[materialName]->create("res/shaders/textured.vert", "res/shaders/textured.frag", "POINT_LIGHT_COUNT 1");
+	}
+	Texture::Sampler* pSampler = materials[materialName]->getParameter("u_diffuseTexture")->setValue(header.path.cStr, true);
+	pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+
+	setShadingParameters(materials[materialName]);
 }
 
 Mesh* MayaViewer::createMesh(const MeshInfoHeader& info, void* data)
