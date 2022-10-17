@@ -410,15 +410,20 @@ void iterateScene()
 		MFnDependencyNode dgNode(transIterator.currentItem(), &status);
 		std::string name = dgNode.name().asChar();
 		MObject node(transIterator.currentItem());
-		
-		if (node.hasFn(MFn::kTransform))
-		{
-			id = MNodeMessage::addAttributeChangedCallback(node, transformAttributeChanged, NULL, &status);
-			if (M_OK2)
-				addCallback(name + "TranformChanged", id);
 
-			if (!SendTransformData(node, producerBuffer))
-				std::cout << name << " | Failed sending transform...\n";		
+
+		MFnTransform tra(node, &status);
+		if (M_OK2)
+		{
+			if (!tra.child(0).hasFn(MFn::kCamera))
+			{
+				id = MNodeMessage::addAttributeChangedCallback(node, transformAttributeChanged, NULL, &status);
+				if (M_OK2)
+					addCallback(name + "TranformChanged", id);
+
+				if (!SendTransformData(node, producerBuffer))
+					std::cout << name << " | Failed sending transform...\n";
+			}
 		}
 	}
 

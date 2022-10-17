@@ -120,7 +120,7 @@ void MayaViewer::update(float elapsedTime)
 			memcpy(&transHeader, msg, sizeof(TransformDataHeader));
 
 			if (_scene->findNode(mainHeader->name))
-				setTransform(transHeader, mainHeader->name);
+				setTransform(*transHeader.transMtrx, mainHeader->name);
 			else
 				OutputDebugString(L"TRANSFORM_DATA | Could not find node...\n");
 
@@ -170,35 +170,7 @@ void MayaViewer::update(float elapsedTime)
 		{
 			CameraHeader camHeader;
 			memcpy(&camHeader, msg, sizeof(CameraHeader));
-			const float AspectRatio = camHeader.width / camHeader.height;
-
-			Node* pNode = _scene->findNode(mainHeader->name);
-			if (!pNode)
-				pNode = _scene->addNode(mainHeader->name);
-
-			Camera* pCamera = pNode->getCamera();
-
-			if (!pCamera)
-			{
-				pNode->setCamera(createCamera(camHeader));
-			}
-			else
-			{
-				pCamera = pNode->getCamera();
-				pCamera->setAspectRatio(AspectRatio);
-
-				if (camHeader.perspective)
-					pCamera->setFieldOfView(camHeader.fieldOfView);
-				else
-				{
-					pCamera->setZoomX(camHeader.width);
-					pCamera->setZoomY(camHeader.height);
-				}
-			}
-
-			if (_scene->getActiveCamera() != pCamera) // maybe if-statement is unnecessary...
-				_scene->setActiveCamera(pNode->getCamera());
-
+			setCamera(camHeader, mainHeader->name);
 			break;
 		}
 		case NODE_DELETE:
@@ -433,7 +405,7 @@ void MayaViewer::updateMesh(const MeshUpdateHeader& header, const char* nodeName
 	pMesh->unmapVertexBuffer();
 }
 
-void MayaViewer::setTransform(const TransformDataHeader& traHeader, const char* nodeName)
+void MayaViewer::setTransform(const float* matrix, const char* nodeName)
 {
 	Node* pNode = _scene->findNode(mainHeader->name);
 	if (!pNode)
@@ -442,7 +414,7 @@ void MayaViewer::setTransform(const TransformDataHeader& traHeader, const char* 
 		return;
 	}
 
-	Matrix mtrx = Matrix(*traHeader.transMtrx);
+	Matrix mtrx = Matrix(matrix);
 	Vector3* translate = new Vector3;
 	Vector3* scale = new Vector3;
 	Quaternion* rotation = new Quaternion;
@@ -459,6 +431,39 @@ void MayaViewer::setTransform(const TransformDataHeader& traHeader, const char* 
 	delete scale;
 	delete rotation;
 	delete rotMtrx;
+}
+
+void MayaViewer::setCamera(const CameraHeader& camHeader, const char* nodeName)
+{
+	const float AspectRatio = camHeader.width / camHeader.height;
+
+	Node* pNode = _scene->findNode(mainHeader->name);
+	if (!pNode)
+		pNode = _scene->addNode(mainHeader->name);
+
+	setTransform(*camHeader.viewMatrix, mainHeader->name);
+
+	Camera* pCamera = pNode->getCamera();
+	if (!pCamera)
+	{
+		pNode->setCamera(createCamera(camHeader));
+	}
+	else
+	{
+		pCamera = pNode->getCamera();
+		pCamera->setAspectRatio(AspectRatio);
+
+		if (camHeader.perspective)
+			pCamera->setFieldOfView(camHeader.fieldOfView);
+		else
+		{
+			pCamera->setZoomX(camHeader.width);
+			pCamera->setZoomY(camHeader.height);
+		}
+	}
+
+	if (_scene->getActiveCamera() != pCamera) // maybe if-statement is unnecessary...
+		_scene->setActiveCamera(pNode->getCamera());
 }
 
 void MayaViewer::keyEvent(Keyboard::KeyEvent evt, int key)

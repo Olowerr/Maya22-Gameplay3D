@@ -476,7 +476,8 @@ inline bool sendCamera(M3dView view, Comlib* pComlib)
 		return false;
 
 	CameraHeader cameraData{};
-	
+
+	transform.transformationMatrix().get(cameraData.viewMatrix);
 	cameraData.fieldOfView = camera.horizontalFieldOfView() * (180.f / M_PI);
 	cameraData.perspective = !camera.isOrtho();
 
