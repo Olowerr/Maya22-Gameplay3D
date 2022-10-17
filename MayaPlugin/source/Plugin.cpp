@@ -166,9 +166,6 @@ void materialDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 		MFnLambertShader lambert(node, &status);
 		if (M_OK2)
 		{
-			
-
-			cout << lambert.color() << endl;
 			lambert.hasAttribute("Color", &status);
 			if (M_OK2)
 			{
@@ -216,20 +213,31 @@ void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 						}
 					}
 
-					lambertPlug = tempLamb.findPlug("normalCamera", false);
-					lambertPlug.connectedTo(lambertCon, true, false);
+					MPlug normPlug = tempLamb.findPlug("normalCamera", false);
+					normPlug.connectedTo(lambertCon, true, false);
 
 					if (lambertCon.length() > 0)
 					{
-						MObject obj(lambertCon[i].node());
-						if (obj.hasFn(MFn::kFileTexture))
+						if (lambertCon[i].node().hasFn(MFn::kBump))
 						{
-							MFnDependencyNode texture(obj);
-							MPlug file = texture.findPlug("ftn", false);
-							MString filename;
-							file.getValue(filename);
-							std::cout << filename << std::endl;
-							hasTexture = true;
+							MFnDependencyNode bump(lambertCon[i].node());
+
+							MPlug bumpPlug = bump.findPlug("bumpValue", false);
+							bumpPlug.connectedTo(lambertCon, true, false);
+
+							if (lambertCon.length() > 0)
+							{
+								MObject obj(lambertCon[i].node());
+								if (obj.hasFn(MFn::kFileTexture))
+								{
+									MFnDependencyNode texture(obj);
+									MPlug file = texture.findPlug("ftn", false);
+									MString filename;
+									file.getValue(filename);
+									std::cout << filename << std::endl;
+									hasTexture = true;
+								}
+							}
 						}
 					}
 
