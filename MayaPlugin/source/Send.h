@@ -475,7 +475,7 @@ inline bool sendColorValues(const MFnLambertShader& shader, const char* material
 		memcpy(msg + offset, &matHeader, sizeof(MaterialDataHeader));
 
 		SectionHeader secHeader;
-		secHeader.name = nodeName;
+		secHeader.name = materialName;
 		secHeader.header = MATERIAL_DATA;
 		secHeader.messageLength = matMsgLen;
 		secHeader.messageID = 0;
@@ -599,75 +599,36 @@ inline bool SendMaterialData(const MFnDependencyNode& material, Comlib* pComlib)
 	return true;
 }
 
-inline bool sendAttachedMaterial(const char* materialName, const char* nodeName, Comlib* pComlib)
-{
-	MStatus status;
-
-	MeshMaterialHeader header;
-	header.materialName = materialName;
-
-	SectionHeader secHeader;
-	secHeader.name = nodeName;
-	secHeader.messageLength = sizeof(MeshMaterialHeader);
-	secHeader.header = MESH_MATERIAL;
-
-	pComlib->Send((char*)&header, &secHeader);
-
-	return true;
-}
-
 inline MObject getMaterial(const MObject& node)
 {
 	MStatus status;
 	MFnDependencyNode dgNode(node, &status);
-	std::cout << "G 0" << "\n";
 	if (M_FAIL(status))
 		return MObject();
 
-	std::cout << dgNode.name() << "\n";
-
-	std::cout << "G 0.25" << "\n";
-	
-	MPlug plug = dgNode.findPlug("instObjGroups", true);
+	MPlug plug = dgNode.findPlug("instObjGroups", false);
 	if (M_FAIL(status))
 		return MObject();
 
-	std::cout <<"num: " << plug.numChildren() << "\n";
-	std::cout <<"num2: " << plug.numConnectedChildren() << "\n";
-
-	for (int i = 0; i < plug.numChildren(); i++)
-	{
-		MPlug a = plug.child(i, &status);
-		if (M_FAIL(status))
-			std::cout << "Failed\n";
-		else
-			std::cout << a.name() << "\n";
-
-	}
-
-	std::cout << "G 0.5" << "\n";
+	plug = plug.connectionByPhysicalIndex(0);
 
 	MPlugArray connections;
 	plug.connectedTo(connections, false, true, &status);
 	if (M_FAIL(status))
 		return MObject();
-	std::cout << "G 1" << "\n";
 
 	for (unsigned int i = 0; i < connections.length(); i++)
 	{
 		if (!connections[i].node().hasFn(MFn::kShadingEngine))
 			continue;
-		std::cout << "G 2" << "\n";
 
-		MFnDependencyNode shadingNode(connections[i], &status);
+		MFnDependencyNode shadingNode(connections[i].node(), &status);
 		if (M_FAIL(status))
 			continue;
-		std::cout << "G 3" << "\n";
 
 		MPlugArray shadingConnections;
 		MPlug shaderPlug = shadingNode.findPlug("surfaceShader", false);
 		shaderPlug.connectedTo(shadingConnections, true, false, &status);
-		std::cout << "G 4" << "\n";
 		if (M_FAIL2)
 			continue;
 
@@ -679,4 +640,40 @@ inline MObject getMaterial(const MObject& node)
 	}
 
 	return MObject();
+}
+
+inline bool sendAttachedMaterial(const MObject& node, Comlib* pComlib)
+{
+	MStatus status;
+
+	MObject materialNode = getMaterial(node);
+	
+	if (!materialNode.hasFn(MFn::kLambert))
+		return false;
+
+	MFnDependencyNode dgNode(materialNode, &status);
+	if (M_FAIL(status))
+		return false;
+
+	MFnTransform tra(MFnMesh(node).parent(0), &status);
+	if (M_FAIL(status))
+		return false;
+
+	const char* materialName = dgNode.name().asChar();
+	const char* nodeName = tra.name().asChar();
+
+	MeshMaterialHeader header;
+	header.materialName = materialName;
+
+	SectionHeader secHeader;
+	secHeader.name = nodeName;
+	secHeader.messageLength = sizeof(MeshMaterialHeader);
+	secHeader.header = MESH_MATERIAL;
+
+	pComlib->Send((char*)&header, &secHeader);
+	std::cout << "sendAttachedMaterial\n";
+
+	return true;
+
+	return true;
 }

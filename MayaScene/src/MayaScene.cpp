@@ -167,8 +167,10 @@ void MayaViewer::update(float elapsedTime)
 			if (!pModel)
 				break;
 
+			materials[header.materialName.cStr]->addRef();
 			pModel->setMaterial(materials[header.materialName.cStr]);
 
+			break;
 		}
 		case MATERIAL_DATA:
 		{

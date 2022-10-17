@@ -283,24 +283,7 @@ void meshSetMaterial(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& oth
 
 		if (otherNode.hasFn(MFn::kShadingEngine) && std::string(plug.name().asChar()).find(".instObjGroups[0]") != -1)
 		{
-			std::cout << "hello?\n";
-			printPlugPath(plug);
-
-			MObject materialNode = getMaterial(plug);
-			if (!materialNode.hasFn(MFn::kLambert))
-				return;
-
-			MFnDependencyNode dgNode(materialNode, &status);
-			if (M_FAIL2)
-				return;
-
-			const char* materialName = dgNode.name().asChar();
-			const char* nodeName = MFnDependencyNode(plug.node()).name().asChar();
-			std::cout << "Mattt: " << materialName << "\n";
-
-			sendAttachedMaterial(materialName, nodeName, producerBuffer);
-
-			std::cout << "SENDING\n";
+			sendAttachedMaterial(plug.node(), producerBuffer);
 		}
 	}
 }
@@ -340,69 +323,7 @@ void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 			if (M_OK2)
 				addCallback(nodeName + "MeshMatAttriChanged", id);
 
-
-			// Send which material to use
-			/*printPlugPath(plug);
-
-			std::cout << "0" << "\n";
-			MObject materialNode = getMaterial(node);
-			if (!materialNode.hasFn(MFn::kLambert))
-				return;
-
-			std::cout << "1" << "\n";
-			MFnDependencyNode dgNode(materialNode, &status);
-			if (M_FAIL2)
-				return;
-
-			const char* materialName = dgNode.name().asChar();
-			const char* nodeName = MFnDependencyNode(plug.node()).name().asChar();
-			std::cout << "Matt: " << materialName << "\n";
-
-			sendAttachedMaterial(materialName, nodeName, producerBuffer);
-
-			std::cout << "SENDING\n";*/
-
-			/*MItMeshVertex it(node, &status);
-			if (M_FAIL2)
-				return;
-
-			MVector normal;
-			float2 uv;
-
-			std::cout <<"Num: "<< it.count() << "\n";
-			for (; !it.isDone(); it.next())
-			{
-				std::cout << it.index() << ":\n";
-
-				it.getNormal(normal);
-				it.getUV(uv);
-
-				printVector(it.position());
-				printVector(normal);
-				printVector(uv);
-				std::cout << "---\n";
-			}*/
-
-			/*MItMeshFaceVertex it2(node, &status);
-			if (M_FAIL2)
-				return;
-
-			MVector normal;
-			float2 uv;
-			int c = 0;
-			for (; !it2.isDone(); it2.next(), c++)
-			{
-				std::cout << it2.vertId() << ", " << it2.faceId() << ":\n";
-
-				it2.getNormal(normal);
-				it2.getUV(uv);
-
-				printVector(it2.position());
-				printVector(normal);
-				printVector(uv);
-				std::cout << "---\n";
-			}
-			std::cout << "num: " << c << "\n";*/
+			sendAttachedMaterial(node, producerBuffer);
 		}
 	}
 
@@ -506,6 +427,9 @@ void iterateScene()
 
 			if (!sendMesh(node, producerBuffer))
 				std::cout << name << " | Failed creating mesh...\n";
+
+			if (!sendAttachedMaterial(node, producerBuffer))
+				std::cout << name << " | Failed sending material...\n";
 		}
 	}
 
