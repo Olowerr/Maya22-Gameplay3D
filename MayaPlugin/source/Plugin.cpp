@@ -197,11 +197,50 @@ void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 				if (connection.hasFn(MFn::kLambert))
 				{
 					MFnLambertShader tempLamb(connection);
-					std::cout << "Lambert material name: " << tempLamb.name() << std::endl;
-					tempLamb.hasAttribute("Color", &status);
-					if (M_OK2)
+					MPlugArray lambertCon;
+					MPlug lambertPlug = tempLamb.findPlug("color", false);
+					lambertPlug.connectedTo(lambertCon, true, false);
+					bool hasTexture = false;
+
+					if (lambertCon.length() > 0)
 					{
-						SendMaterialData(tempLamb, producerBuffer, plug.node());
+						MObject obj(lambertCon[i].node());
+						if (obj.hasFn(MFn::kFileTexture))
+						{
+							MFnDependencyNode texture(obj);
+							MPlug file = texture.findPlug("ftn", false);
+							MString filename;
+							file.getValue(filename);
+							std::cout << filename << std::endl;
+							hasTexture = true;
+						}
+					}
+
+					lambertPlug = tempLamb.findPlug("normalCamera", false);
+					lambertPlug.connectedTo(lambertCon, true, false);
+
+					if (lambertCon.length() > 0)
+					{
+						MObject obj(lambertCon[i].node());
+						if (obj.hasFn(MFn::kFileTexture))
+						{
+							MFnDependencyNode texture(obj);
+							MPlug file = texture.findPlug("ftn", false);
+							MString filename;
+							file.getValue(filename);
+							std::cout << filename << std::endl;
+							hasTexture = true;
+						}
+					}
+
+					if (!hasTexture)
+					{
+						std::cout << "Lambert material name: " << tempLamb.name() << std::endl;
+						tempLamb.hasAttribute("Color", &status);
+						if (M_OK2)
+						{
+							SendMaterialData(tempLamb, producerBuffer, plug.node());
+						}
 					}
 				}
 

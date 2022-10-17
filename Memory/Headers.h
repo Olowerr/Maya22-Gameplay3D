@@ -56,6 +56,11 @@ struct MaterialDataHeader
 	float color[4];
 };
 
+struct TextureDataHeader
+{
+	CharString path;
+};
+
 struct CameraHeader
 {
 	bool perspective;
