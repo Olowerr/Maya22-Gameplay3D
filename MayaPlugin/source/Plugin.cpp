@@ -377,26 +377,6 @@ void iterateScene()
 {
 	MCallbackId id;
 
-	MItDependencyNodes matIterator(MFn::kLambert, &status);
-	if (M_OK2)
-	{
-		for (; !matIterator.isDone(); matIterator.next())
-		{
-			MFnDependencyNode dgNode(matIterator.thisNode());
-			std::string name = dgNode.name().asChar();
-			MObject node = matIterator.thisNode();
-
-			id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
-			if (M_OK2)
-				addCallback(name + "MaterialChanged", id);
-			else
-				std::cout << name << " | Failed creating material...\n";
-
-			SendMaterialData(dgNode, producerBuffer);
-
-		}
-	}
-
 	// MESHES
 	MItDag meshIterator(MItDag::kBreadthFirst, MFn::kMesh, &status);
 	for (; !meshIterator.isDone(); meshIterator.next())
@@ -460,6 +440,25 @@ void iterateScene()
 		}
 	}
 
+	MItDependencyNodes matIterator(MFn::kLambert, &status);
+	if (M_OK2)
+	{
+		for (; !matIterator.isDone(); matIterator.next())
+		{
+			MFnDependencyNode dgNode(matIterator.thisNode());
+			std::string name = dgNode.name().asChar();
+			MObject node = matIterator.thisNode();
+
+			id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
+			if (M_OK2)
+				addCallback(name + "MaterialChanged", id);
+			else
+				std::cout << name << " | Failed creating material...\n";
+
+			SendMaterialData(dgNode, producerBuffer);
+
+		}
+	}
 
 
 	M3dView view = M3dView::active3dView();
@@ -518,6 +517,9 @@ void nodeAdded(MObject& node, void* clientData)
 			if (M_OK2)
 				addCallback(name + "AttriChanged", id);
 
+			MCallbackId id = MNodeMessage::addAttributeChangedCallback(node, meshSetMaterial, nullptr, &status);
+			if (M_OK2)
+				addCallback(name + "MeshMatAttriChanged", id);
 		}
 
 		if (node.hasFn(MFn::kTransform))

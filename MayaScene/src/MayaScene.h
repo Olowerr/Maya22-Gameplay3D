@@ -69,9 +69,20 @@ private:
     char* msg;
     SectionHeader* mainHeader;
 
-    std::unordered_map<std::string, Material*> materials;
-    // broh
-    std::unordered_map<std::string, bool> colored;
+    struct Mat
+    {
+        bool colored = true;
+        Vector4 color;
+        std::string diffuse;
+        std::string normal;
+    };
+
+    // nodeName - Material
+    std::unordered_map<std::string, std::string> nodes;
+
+    // Material - isColored (shader type)
+    std::unordered_map<std::string, Mat> materials;
+
 
     /**
      * Draws the scene each frame.
@@ -82,13 +93,14 @@ private:
     Mesh* createMesh(const MeshInfoHeader& info, void* data);
 	Mesh* createCubeMesh(float size = 1.0f);
 
+    void attachMaterial(const char* nodeName, const char* materialName);
 	void setMaterial(const MaterialDataHeader& header, const char* materialName);
-	void setMaterial(const TextureDataHeader& header, const char* materialName);
-   // void setMaterial(const MaterialDataHeader& header, const char* nodeName);
-   // void setMaterial(const TextureDataHeader& header, const char* nodeName);
+	void setMaterial(const TextureDataHeader& header, const char* materialName, bool diffuse);
+
     void setShadingParameters(Material* pModel);
 
-    void setDefaultMat(Model* pModel);
+    void createTexturedMaterial(Model* pModel);
+    void createColoredMaterial(Model* pModel);
 
     void createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
     void recreateMesh(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);
@@ -101,8 +113,7 @@ private:
     // temp
     Light* light;
 
-    Technique* colour;
-    Technique* texture;
+    Material* pMaterial;
 
     void foo();
 
