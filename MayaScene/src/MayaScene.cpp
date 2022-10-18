@@ -395,7 +395,6 @@ void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const
 
 	createColoredMaterial(pModel);
 
-
 	pNode->setDrawable(pModel);
 	SAFE_RELEASE(pMesh);
 	SAFE_RELEASE(pModel);
@@ -782,7 +781,7 @@ void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materi
 			{
 				if (header.path.cStr != "")
 				{
-					Texture::Sampler* pSampler = pMaterial->getParameter("u_diffuseTexture")->setValue(header.path.cStr, true);
+					Texture::Sampler* pSampler = pModel->getMaterial()->getParameter("u_diffuseTexture")->setValue(header.path.cStr, true);
 					pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
 				}
 			}
@@ -790,7 +789,7 @@ void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materi
 			{
 				if (header.path.cStr != "")
 				{
-					Texture::Sampler* pSampler = pMaterial->getParameter("u_normalmapTexture")->setValue(header.path.cStr, true);
+					Texture::Sampler* pSampler = pModel->getMaterial()->getParameter("u_normalmapTexture")->setValue(header.path.cStr, true);
 					pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
 				}
 			}
