@@ -18,7 +18,7 @@ void addCallback(const std::string& name, MCallbackId id)
 {
 	static int i = 0;
 	std::string tempName = name;
-	
+
 	if (callbacks.count(name))
 		tempName += i++;
 
@@ -28,7 +28,7 @@ void addCallbackDelOld(const std::string& name, MCallbackId id)
 {
 	if (callbacks.count(name))
 		MMessage::removeCallback(callbacks[name]);
-	
+
 	callbacks[name] = id;
 }
 void removeCallback(const std::string& name)
@@ -67,7 +67,7 @@ void removeCallback(const std::string& name)
 
 	------
 
-	USE MItMeshFaceVertex FOR VERTEX BUFFER 
+	USE MItMeshFaceVertex FOR VERTEX BUFFER
 	USE mesh.getTriangleOffsets FOR INDEX BUFFER
 	WHEN DRAGGING VERT FIND AFFECTED VERTS BY LOOP THRO MIT AND SEARCH FOR vertId() == INDEX
 	SAVE I WHEN FOUND AND UPDATE VERTEX BUFFER WITH SAVED INDICIES
@@ -91,7 +91,7 @@ void meshAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug
 
 		std::string nodeName = mesh.name().asChar();
 		std::string plugName = plug.name().asChar();
-		
+
 		if (plugName.find(".pnts[") != -1)
 		{
 #if PRINT_SENDS
@@ -166,36 +166,92 @@ void materialDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 		MFnLambertShader lambert(node, &status);
 		if (M_OK2)
 		{
-			
+
 		}
 	}
 }
 
-void textureAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* clientData)
+void diffuseTexAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* clientData)
 {
 	if (msg & MNodeMessage::kAttributeSet)
 	{
 		MFnDependencyNode dgNode(plug.node(), &status);
 		if (M_FAIL2)
 			return;
-		
-		MPlug outColor = dgNode.findPlug("outColor", false, &status);
+
+
+		MPlug plug = dgNode.findPlug("outColor", false, &status);
 		if (M_FAIL2)
 			return;
 
 		MPlugArray connections;
-		outColor.connectedTo(connections, false, true, &status);
+		plug.connectedTo(connections, false, true, &status);
+		if (M_FAIL2)
+			return;
+
+
+		for (int i = 0; i < connections.length(); i++)
+		{
+			if (connections[i].node().hasFn(MFn::kLambert))
+			{
+				MFnDependencyNode material(connections[i].node(), &status);
+				if (M_OK2)
+				{
+					SendMaterialData(material, producerBuffer);
+				}
+			}
+		}
+	}
+}
+
+void normalMapAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* clientData)
+{
+	if (msg & MNodeMessage::kAttributeSet)
+	{
+		MFnDependencyNode dgNode(plug.node(), &status);
+		if (M_FAIL2)
+			return;
+
+		MPlug plug = dgNode.findPlug("outAlpha", false, &status);
+		if (M_FAIL2)
+			return;
+
+		MPlugArray connections;
+		plug.connectedTo(connections, false, true, &status);
 		if (M_FAIL2)
 			return;
 
 		for (int i = 0; i < connections.length(); i++)
 		{
-			MFnDependencyNode material(connections[i].node(), &status);
-			if (M_OK2)
+			if (connections[i].node().hasFn(MFn::kBump))
 			{
-				SendMaterialData(material, producerBuffer);
+				MFnDependencyNode bumpNode(connections[i].node(), &status);
+				if (M_FAIL2)
+					continue;
+
+				plug = bumpNode.findPlug("outNormal", false, &status);
+				if (M_FAIL2)
+					continue;
+
+				break;
 			}
-		}	
+		}
+
+		plug.connectedTo(connections, false, true, &status);
+		if (M_FAIL2)
+			return;
+
+		for (int i = 0; i < connections.length(); i++)
+		{
+			if (connections[i].node().hasFn(MFn::kLambert))
+			{
+				MFnDependencyNode material(connections[i].node(), &status);
+				if (M_OK2)
+				{
+					SendMaterialData(material, producerBuffer);
+				}
+			}
+		}
 	}
 }
 
@@ -210,7 +266,7 @@ void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 		if (otherNode.hasFn(MFn::kShadingEngine))
 		{
 			MFnDependencyNode material(otherPlug.node());
-			
+
 			SendMaterialData(material, producerBuffer);
 
 			/*MFnMesh mesh(plug.node(), &status);
@@ -224,11 +280,37 @@ void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 
 		if (otherNode.hasFn(MFn::kFileTexture))
 		{
-			MCallbackId id = MNodeMessage::addAttributeChangedCallback(otherNode, textureAttributeChanged, nullptr, &status);
+			MCallbackId id = MNodeMessage::addAttributeChangedCallback(otherNode, diffuseTexAttributeChanged, nullptr, &status);
 			if (M_OK2)
 			{
 				std::string textureNodeName = MFnDependencyNode(otherPlug.node()).name().asChar();
 				addCallback(textureNodeName + "FileTextureChanged", id);
+			}
+		}
+
+		if (otherNode.hasFn(MFn::kBump))
+		{
+			MFnDependencyNode bumpNode(otherNode, &status);
+			if (M_OK2)
+			{
+				MPlugArray plugArr;
+				MPlug bumpPlug = bumpNode.findPlug("bumpValue", false);
+				bumpPlug.connectedTo(plugArr, true, false);
+
+				for (unsigned int i = 0; i < plugArr.length(); i++)
+				{
+					MObject obj(plugArr[i].node());
+					if (obj.hasFn(MFn::kFileTexture))
+					{
+						MCallbackId id = MNodeMessage::addAttributeChangedCallback(obj, normalMapAttributeChanged, nullptr, &status);
+						if (M_OK2)
+						{
+							std::string textureNodeName = MFnDependencyNode(obj).name().asChar();
+							addCallback(textureNodeName + "FileTextureChanged", id);
+						}
+						break;
+					}
+				}
 			}
 		}
 	}
@@ -239,7 +321,7 @@ void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 			MFnDependencyNode material(plug.node());
 
 			SendMaterialData(material, producerBuffer);
-		}	
+		}
 
 	}
 	//if (msg & MNodeMessage::kAttributeSet)
@@ -302,7 +384,7 @@ void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 	std::cout << "MESH DIRTY | ";
 	printPlugPath(plug);
 #endif
-	
+
 	MFnMesh mesh(node, &status);
 	if (M_OK2)
 	{
@@ -377,6 +459,26 @@ void iterateScene()
 {
 	MCallbackId id;
 
+	MItDependencyNodes matIterator(MFn::kLambert, &status);
+	if (M_OK2)
+	{
+		for (; !matIterator.isDone(); matIterator.next())
+		{
+			MFnDependencyNode dgNode(matIterator.thisNode());
+			std::string name = dgNode.name().asChar();
+			MObject node = matIterator.thisNode();
+
+			id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
+			if (M_OK2)
+				addCallback(name + "MaterialChanged", id);
+			else
+				std::cout << name << " | Failed creating material...\n";
+
+			SendMaterialData(dgNode, producerBuffer);
+
+		}
+	}
+
 	// MESHES
 	MItDag meshIterator(MItDag::kBreadthFirst, MFn::kMesh, &status);
 	for (; !meshIterator.isDone(); meshIterator.next())
@@ -385,7 +487,7 @@ void iterateScene()
 		std::string name = dgNode.name().asChar();
 
 		MObject node(meshIterator.currentItem());
-		
+
 		if (node.hasFn(MFn::kMesh))
 		{
 			id = MPolyMessage::addPolyTopologyChangedCallback(node, meshTopoChanged, nullptr, &status);
@@ -440,25 +542,12 @@ void iterateScene()
 		}
 	}
 
-	MItDependencyNodes matIterator(MFn::kLambert, &status);
-	if (M_OK2)
-	{
-		for (; !matIterator.isDone(); matIterator.next())
-		{
-			MFnDependencyNode dgNode(matIterator.thisNode());
-			std::string name = dgNode.name().asChar();
-			MObject node = matIterator.thisNode();
+	/*
+		not sending normal map during run time
+		not sending normal map during run time
+		not sending normal map during run time
+	*/
 
-			id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
-			if (M_OK2)
-				addCallback(name + "MaterialChanged", id);
-			else
-				std::cout << name << " | Failed creating material...\n";
-
-			SendMaterialData(dgNode, producerBuffer);
-
-		}
-	}
 
 
 	M3dView view = M3dView::active3dView();
@@ -588,15 +677,15 @@ EXPORT MStatus initializePlugin(MObject obj) {
 	// Cameras
 	callbackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel1", cameraMoved);
 	if (M_OK2)
-		callbacks.insert({ "cameraPanel1", callbackId});
+		callbacks.insert({ "cameraPanel1", callbackId });
 
 	callbackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel2", cameraMoved);
 	if (M_OK2)
-		callbacks.insert({ "cameraPanel2", callbackId});
+		callbacks.insert({ "cameraPanel2", callbackId });
 
 	callbackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel3", cameraMoved);
 	if (M_OK2)
-		callbacks.insert({ "cameraPanel3", callbackId});
+		callbacks.insert({ "cameraPanel3", callbackId });
 
 	callbackId = MUiMessage::add3dViewPreRenderMsgCallback("modelPanel4", cameraMoved);
 	if (M_OK2)
