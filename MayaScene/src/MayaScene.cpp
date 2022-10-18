@@ -655,8 +655,17 @@ void MayaViewer::attachMaterial(const char* nodeName, const char* materialName)
 	else
 	{
 		createTexturedMaterial(pModel);
-		Texture::Sampler* pSampler = pModel->getMaterial()->getParameter("u_diffuseTexture")->setValue(mat->second.diffuse.c_str(), true);
-		pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+
+		if (mat->second.diffuse != "")
+		{
+			Texture::Sampler* pSampler = pModel->getMaterial()->getParameter("u_diffuseTexture")->setValue(mat->second.diffuse.c_str(), true);
+			pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+		}
+		if (mat->second.normal != "")
+		{
+			Texture::Sampler* pSampler = pModel->getMaterial()->getParameter("u_normalmapTexture")->setValue(mat->second.normal.c_str(), true);
+			pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+		}
 	}
 
 
@@ -721,19 +730,12 @@ void MayaViewer::setMaterial(const MaterialDataHeader& header, const char* mater
 void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materialName, bool diffuse)
 {
 	bool found = false;
-
-	for (auto& material : materials)
-	{
-		if (material.first == materialName)
-			found = true;
-	}
-
-	if (!found)
+	if (materials.find(materialName) == materials.end())
 	{
 		materials[materialName].colored = false;
-		materials[materialName].diffuse = header.path.cStr;
 	}
 
+	auto& mat = materials.find(materialName);
 	for (auto& node : nodes)
 	{
 		if (node.second == materialName)
@@ -748,7 +750,7 @@ void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materi
 
 			Material* pMaterial = pModel->getMaterial();
 
-			if (materials[materialName].colored)
+			if (mat->second.colored)
 			{
 				if (pMaterial)
 					SAFE_RELEASE(pMaterial);
@@ -756,7 +758,7 @@ void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materi
 				createTexturedMaterial(pModel);
 
 			}
-			if (!materials[materialName].colored)
+			if (!mat->second.colored)
 			{
 				if (!pMaterial)
 					createTexturedMaterial(pModel);
@@ -764,20 +766,30 @@ void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materi
 
 			if (diffuse)
 			{
-				Texture::Sampler* pSampler = pMaterial->getParameter("u_diffuseTexture")->setValue(header.path.cStr, true);
-				pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+				if (header.path.cStr != "")
+				{
+					Texture::Sampler* pSampler = pMaterial->getParameter("u_diffuseTexture")->setValue(header.path.cStr, true);
+					pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+				}
 			}
 			else
 			{
-				Texture::Sampler* pSampler = pMaterial->getParameter("u_normalmapTexture")->setValue(header.path.cStr, true);
-				pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+				if (header.path.cStr != "")
+				{
+					Texture::Sampler* pSampler = pMaterial->getParameter("u_normalmapTexture")->setValue(header.path.cStr, true);
+					pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+				}
 			}
 
 		}
 	}
 
 	materials[materialName].colored = false;
-	materials[materialName].diffuse = header.path.cStr;
+	
+	if (diffuse)
+		materials[materialName].diffuse = header.path.cStr;
+	else
+		materials[materialName].normal = header.path.cStr;
 }
 
 Mesh* MayaViewer::createMesh(const MeshInfoHeader& info, void* data)
