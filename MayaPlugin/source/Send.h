@@ -671,7 +671,7 @@ inline bool sendAttachedMaterial(const MObject& node, Comlib* pComlib)
 	secHeader.header = MESH_MATERIAL;
 
 	pComlib->Send((char*)&header, &secHeader);
-	std::cout << "sendAttachedMaterial\n";
+	std::cout << nodeName << " | " << materialName << " | sendAttachedMaterial\n";
 
 	return true;
 

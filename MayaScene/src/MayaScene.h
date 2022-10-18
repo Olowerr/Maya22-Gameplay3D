@@ -104,6 +104,8 @@ private:
     Technique* colour;
     Technique* texture;
 
+    void foo();
+
 };
 
 #endif

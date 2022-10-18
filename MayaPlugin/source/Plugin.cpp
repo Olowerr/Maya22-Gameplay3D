@@ -416,14 +416,17 @@ void iterateScene()
 			if (M_OK2)
 				addCallback(name + "AttriChanged", id);
 
-			id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
+			/*id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
 			if (M_OK2)
 				addCallback(name + "MaterialChanged", id);
 
 			id = MNodeMessage::addNodeDirtyPlugCallback(node, materialDirtyPlug, nullptr, &status);
 			if (M_OK2)
-				addCallback(name + "DirtyMaterialPlug", id);
+				addCallback(name + "DirtyMaterialPlug", id);*/
 
+			MCallbackId id = MNodeMessage::addAttributeChangedCallback(node, meshSetMaterial, nullptr, &status);
+			if (M_OK2)
+				addCallback(name + "MeshMatAttriChanged", id);
 
 			if (!sendMesh(node, producerBuffer))
 				std::cout << name << " | Failed creating mesh...\n";

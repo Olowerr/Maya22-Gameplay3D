@@ -47,28 +47,28 @@ void MayaViewer::initialize()
 	Material* mats[gModelCount];
 	Texture::Sampler* samplers[gModelCount];
 
-	char nodeName[10] = {};
-	for (int i = 0; i < gModelCount; i++)
-	{
-		models[i] = Model::create(mesh1);
-		mats[i] = models[i]->setMaterial( "res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
-		mats[i]->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
-		mats[i]->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
-		mats[i]->getParameter("u_ambientColor")->setValue(Vector3(0.4f, 0.1f, 1.f));
-		mats[i]->getParameter("u_diffuseColor")->setValue(Vector4(0.1f, 1.f, 1.f, 1.f));
-		mats[i]->getParameter("u_pointLightColor[0]")->setValue(lightNode->getLight()->getColor());
-		mats[i]->getParameter("u_pointLightPosition[0]")->bindValue(lightNode, &Node::getTranslationWorld);
-		mats[i]->getParameter("u_pointLightRangeInverse[0]")->bindValue(lightNode->getLight(), &Light::getRangeInverse);
-		//samplers[i] = mats[i]->getParameter("u_diffuseTexture")->setValue("res/png/crate.png", true);
-		//samplers[i]->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
-		mats[i]->getStateBlock()->setCullFace(true);
-		mats[i]->getStateBlock()->setDepthTest(true);
-		mats[i]->getStateBlock()->setDepthWrite(true);
-		sprintf(nodeName, "cube%d", i);
-		Node* node = _scene->addNode(nodeName);
-		node->setDrawable(models[i]);
-		SAFE_RELEASE(models[i]);
-	}
+	//char nodeName[10] = {};
+	//for (int i = 0; i < gModelCount; i++)
+	//{
+	//	models[i] = Model::create(mesh1);
+	//	mats[i] = models[i]->setMaterial( "res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
+	//	mats[i]->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
+	//	mats[i]->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
+	//	mats[i]->getParameter("u_ambientColor")->setValue(Vector3(0.4f, 0.1f, 1.f));
+	//	mats[i]->getParameter("u_diffuseColor")->setValue(Vector4(0.1f, 1.f, 1.f, 1.f));
+	//	mats[i]->getParameter("u_pointLightColor[0]")->setValue(lightNode->getLight()->getColor());
+	//	mats[i]->getParameter("u_pointLightPosition[0]")->bindValue(lightNode, &Node::getTranslationWorld);
+	//	mats[i]->getParameter("u_pointLightRangeInverse[0]")->bindValue(lightNode->getLight(), &Light::getRangeInverse);
+	//	//samplers[i] = mats[i]->getParameter("u_diffuseTexture")->setValue("res/png/crate.png", true);
+	//	//samplers[i]->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+	//	mats[i]->getStateBlock()->setCullFace(true);
+	//	mats[i]->getStateBlock()->setDepthTest(true);
+	//	mats[i]->getStateBlock()->setDepthWrite(true);
+	//	sprintf(nodeName, "cube%d", i);
+	//	Node* node = _scene->addNode(nodeName);
+	//	node->setDrawable(models[i]);
+	//	SAFE_RELEASE(models[i]);
+	//}
 }
 
 void MayaViewer::finalize()
@@ -78,11 +78,6 @@ void MayaViewer::finalize()
 
 void MayaViewer::update(float elapsedTime)
 {
-	static float totalTime = 0;
-	totalTime += elapsedTime;
-	float step = 360.0 / float(gModelCount);
-	char name[10] = {};
-
 	while (consumerBuffer->Recieve(msg, mainHeader))
 	{
 		switch (mainHeader->header)
@@ -167,7 +162,7 @@ void MayaViewer::update(float elapsedTime)
 			if (!pModel)
 				break;
 
-			materials[header.materialName.cStr]->addRef();
+			//materials[header.materialName.cStr]->addRef();
 			pModel->setMaterial(materials[header.materialName.cStr]);
 
 			break;
@@ -238,6 +233,15 @@ void MayaViewer::update(float elapsedTime)
 		}
 
 	}
+	if (gKeys[Keyboard::KEY_E])
+		foo();
+	return;
+
+
+	static float totalTime = 0;
+	totalTime += elapsedTime;
+	float step = 360.0 / float(gModelCount);
+	char name[10] = {};
 
 	for (int i = 0; i < gModelCount; i++)
 	{
@@ -264,6 +268,7 @@ void MayaViewer::update(float elapsedTime)
 	if (gKeys[Keyboard::KEY_D])
 		camnode->translateLeft(-0.5);
 
+	
 	if (gMousePressed) {
 		camnode->rotate(camnode->getRightVectorWorld(), MATH_DEG_TO_RAD(gDeltaY / 10.0));
 		camnode->rotate(camnode->getUpVectorWorld(), MATH_DEG_TO_RAD(gDeltaX / 5.0));
@@ -276,6 +281,17 @@ Camera* MayaViewer::createCamera(const CameraHeader& cameraHeader)
 	return cameraHeader.perspective ?
 		Camera::createPerspective(cameraHeader.fieldOfView, AspectRatio, 0.1f, 5000.f) :
 		Camera::createOrthographic(cameraHeader.width, cameraHeader.height, AspectRatio, 0.1f, 5000.f);
+}
+
+void MayaViewer::foo()
+{
+	std::vector<Node*> nodes;
+	_scene->findNodes("", nodes, true, false);
+
+
+
+
+	int q = 0;
 }
 
 void MayaViewer::render(float elapsedTime)
