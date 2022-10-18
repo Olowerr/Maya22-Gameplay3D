@@ -10,7 +10,7 @@ int gDeltaY;
 bool gMousePressed;
 
 MayaViewer::MayaViewer()
-    : _scene(NULL), _wireframe(false)
+	: _scene(NULL), _wireframe(false)
 {
 }
 
@@ -21,9 +21,9 @@ MayaViewer::~MayaViewer()
 
 void MayaViewer::initialize()
 {
-	consumerBuffer = new Comlib(L"Filemap",150, ProcessType::Consumer);
+	consumerBuffer = new Comlib(L"Filemap", 150, ProcessType::Consumer);
 
-    // Load game scene from file
+	// Load game scene from file
 	_scene = Scene::create();
 
 	Camera* cam = Camera::createPerspective(45.0f, getAspectRatio(), 1.0, 100.0f);
@@ -86,7 +86,7 @@ void MayaViewer::initialize()
 
 void MayaViewer::finalize()
 {
-    SAFE_RELEASE(_scene);
+	SAFE_RELEASE(_scene);
 }
 
 void MayaViewer::update(float elapsedTime)
@@ -101,7 +101,7 @@ void MayaViewer::update(float elapsedTime)
 		case MESH_NEW:
 		{
 			MeshInfoHeader meshInfo;
-            memcpy(&meshInfo, msg, sizeof(MeshInfoHeader));
+			memcpy(&meshInfo, msg, sizeof(MeshInfoHeader));
 
 			if (!_scene->findNode(mainHeader->name))
 				createNode(meshInfo, msg + sizeof(MeshInfoHeader), mainHeader->name);
@@ -174,7 +174,7 @@ void MayaViewer::update(float elapsedTime)
 			Model* pModel = dynamic_cast<Model*>(pNode->getDrawable());
 			if (!pModel)
 				break;
-			
+
 			attachMaterial(mainHeader->name, header.materialName);
 
 			break;
@@ -185,7 +185,7 @@ void MayaViewer::update(float elapsedTime)
 			memcpy(&matHeader, msg, sizeof(MaterialDataHeader));
 
 			setMaterial(matHeader, mainHeader->name);
-			
+
 			break;
 		}
 		case COLOR_TEXTURE:
@@ -247,7 +247,7 @@ void MayaViewer::update(float elapsedTime)
 
 	return;
 
-	
+
 	static float totalTime = 0;
 	totalTime += elapsedTime;
 	float step = 360.0 / float(gModelCount);
@@ -260,13 +260,13 @@ void MayaViewer::update(float elapsedTime)
 		if (node) {
 			node->setScale(0.3f);
 			node->setTranslation(
-				cosf(MATH_DEG_TO_RAD(((int)totalTime / 10) % 360 + i * step))*5.0, 
-				sinf(MATH_DEG_TO_RAD(((int)totalTime / 10) % 360 + i * step))*5.0,
+				cosf(MATH_DEG_TO_RAD(((int)totalTime / 10) % 360 + i * step)) * 5.0,
+				sinf(MATH_DEG_TO_RAD(((int)totalTime / 10) % 360 + i * step)) * 5.0,
 				0.0);
 		}
-		if (i%2)
+		if (i % 2)
 			node->rotateX(elapsedTime / 1000.f);
-	}	
+	}
 
 	Node* camnode = _scene->getActiveCamera()->getNode();
 	if (gKeys[Keyboard::KEY_W])
@@ -278,7 +278,7 @@ void MayaViewer::update(float elapsedTime)
 	if (gKeys[Keyboard::KEY_D])
 		camnode->translateLeft(-0.5);
 
-	
+
 	if (gMousePressed) {
 		camnode->rotate(camnode->getRightVectorWorld(), MATH_DEG_TO_RAD(gDeltaY / 10.0));
 		camnode->rotate(camnode->getUpVectorWorld(), MATH_DEG_TO_RAD(gDeltaX / 5.0));
@@ -306,21 +306,21 @@ void MayaViewer::foo()
 
 void MayaViewer::render(float elapsedTime)
 {
-    // Clear the color and depth buffers
-    clear(CLEAR_COLOR_DEPTH, Vector4(0.1f,0.0f,0.0f,1.0f), 1.0f, 0);
+	// Clear the color and depth buffers
+	clear(CLEAR_COLOR_DEPTH, Vector4(0.1f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
 
-    // Visit all the nodes in the scene for drawing
-    _scene->visit(this, &MayaViewer::drawScene);
+	// Visit all the nodes in the scene for drawing
+	_scene->visit(this, &MayaViewer::drawScene);
 }
 
 bool MayaViewer::drawScene(Node* node)
 {
-    // If the node visited contains a drawable object, draw it
-    Drawable* drawable = node->getDrawable(); 
-    if (drawable)
-        drawable->draw(_wireframe);
+	// If the node visited contains a drawable object, draw it
+	Drawable* drawable = node->getDrawable();
+	if (drawable)
+		drawable->draw(_wireframe);
 
-    return true;
+	return true;
 }
 
 void MayaViewer::setShadingParameters(Material* pMaterial)
@@ -336,10 +336,10 @@ void MayaViewer::setShadingParameters(Material* pMaterial)
 	pMaterial->getStateBlock()->setDepthWrite(true);
 }
 
-void MayaViewer::createTexturedMaterial(Model* pModel, bool diffuse)
+void MayaViewer::createTexturedMaterial(Model* pModel, bool hasNormal)
 {
 	Material* pMat;
-	if (diffuse)
+	if (hasNormal)
 	{
 		pMat = pModel->setMaterial("res/shaders/normTex.vert", "res/shaders/normTex.frag", "POINT_LIGHT_COUNT 1");
 	}
@@ -383,7 +383,7 @@ void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const
 		OutputDebugString(L"createNode | Failed to create mesh...\n");
 		return;
 	}
-	
+
 	Node* pNode = _scene->addNode(mainHeader->name.cStr);
 
 	Model* pModel = Model::create(pMesh);
@@ -539,16 +539,16 @@ void MayaViewer::keyEvent(Keyboard::KeyEvent evt, int key)
 	if (key >= 256)
 		return;
 
-    if (evt == Keyboard::KEY_PRESS)
-    {
+	if (evt == Keyboard::KEY_PRESS)
+	{
 		gKeys[key] = true;
-        switch (key)
-        {
-        case Keyboard::KEY_ESCAPE:
-            exit();
-            break;
+		switch (key)
+		{
+		case Keyboard::KEY_ESCAPE:
+			exit();
+			break;
 		};
-    }
+	}
 	else if (evt == Keyboard::KEY_RELEASE)
 	{
 		gKeys[key] = false;
@@ -572,16 +572,16 @@ bool MayaViewer::mouseEvent(Mouse::MouseEvent evt, int x, int y, int wheelDelta)
 
 void MayaViewer::touchEvent(Touch::TouchEvent evt, int x, int y, unsigned int contactIndex)
 {
-    switch (evt)
-    {
-    case Touch::TOUCH_PRESS:
-        _wireframe = !_wireframe;
-        break;
-    case Touch::TOUCH_RELEASE:
-        break;
-    case Touch::TOUCH_MOVE:
-        break;
-    };
+	switch (evt)
+	{
+	case Touch::TOUCH_PRESS:
+		_wireframe = !_wireframe;
+		break;
+	case Touch::TOUCH_RELEASE:
+		break;
+	case Touch::TOUCH_MOVE:
+		break;
+	};
 }
 
 Mesh* MayaViewer::createCubeMesh(float size)
@@ -638,6 +638,12 @@ Mesh* MayaViewer::createCubeMesh(float size)
 	return mesh;
 }
 
+/*
+	gå från bara diffuse till bara normal och tvärtom fukar, sampelrs lever kvar?
+	gå från bara diffuse till bara normal och tvärtom fukar, sampelrs lever kvar?
+	gå från bara diffuse till bara normal och tvärtom fukar, sampelrs lever kvar?
+*/
+
 void MayaViewer::attachMaterial(const char* nodeName, const char* materialName)
 {
 	auto mat = materials.find(materialName);
@@ -662,8 +668,8 @@ void MayaViewer::attachMaterial(const char* nodeName, const char* materialName)
 	}
 	else
 	{
-		bool diffuse = mat->second.normal != "";
-		createTexturedMaterial(pModel, diffuse);
+		bool hasNormal = mat->second.normal != "";
+		createTexturedMaterial(pModel, hasNormal);
 
 		if (mat->second.diffuse != "")
 		{
@@ -713,25 +719,14 @@ void MayaViewer::setMaterial(const MaterialDataHeader& header, const char* mater
 
 			Material* pMaterial = pModel->getMaterial();
 
-			if (!materials[materialName].colored)
-			{
-				if (pMaterial)
-					SAFE_RELEASE(pMaterial);
-				
+			if (!pMaterial)
 				createColoredMaterial(pModel);
-
-			}
-			if (materials[materialName].colored)
-			{
-				if (!pMaterial)
-					createColoredMaterial(pModel);
-			}
 
 			pModel->getMaterial()->getParameter("u_diffuseColor")->setValue(color);
 
 		}
 	}
-	
+
 	materials[materialName].colored = true;
 	materials[materialName].color = color;
 }
@@ -743,6 +738,11 @@ void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materi
 	{
 		materials[materialName].colored = false;
 	}
+
+	if (diffuse)
+		materials[materialName].diffuse = header.path.cStr;
+	else
+		materials[materialName].normal = header.path.cStr;
 
 	auto& mat = materials.find(materialName);
 	for (auto& node : nodes)
@@ -759,50 +759,27 @@ void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materi
 
 			Material* pMaterial = pModel->getMaterial();
 
-			if (mat->second.colored)
-			{
-				if (pMaterial)
-					SAFE_RELEASE(pMaterial);
 
-				bool diffuse = mat->second.normal != "";
-				createTexturedMaterial(pModel, diffuse);
+			bool hasNormal = mat->second.normal != "";
+			createTexturedMaterial(pModel, hasNormal);
 
-			}
-			if (!mat->second.colored)
+			if (mat->second.diffuse != "")
 			{
-				if (!pMaterial)
-				{
-					bool diffuse = mat->second.normal != "";
-					createTexturedMaterial(pModel, diffuse);
-				}
+				Texture::Sampler* pSampler = pModel->getMaterial()->getParameter("u_diffuseTexture")->setValue(mat->second.diffuse.c_str(), true);
+				pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
 			}
 
-			if (diffuse)
+			if (mat->second.normal != "")
 			{
-				if (header.path.cStr != "")
-				{
-					Texture::Sampler* pSampler = pModel->getMaterial()->getParameter("u_diffuseTexture")->setValue(header.path.cStr, true);
-					pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
-				}
+				Texture::Sampler* pSampler = pModel->getMaterial()->getParameter("u_normalmapTexture")->setValue(mat->second.normal.c_str(), true);
+				pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
 			}
-			else
-			{
-				if (header.path.cStr != "")
-				{
-					Texture::Sampler* pSampler = pModel->getMaterial()->getParameter("u_normalmapTexture")->setValue(header.path.cStr, true);
-					pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
-				}
-			}
+
 
 		}
 	}
 
 	materials[materialName].colored = false;
-	
-	if (diffuse)
-		materials[materialName].diffuse = header.path.cStr;
-	else
-		materials[materialName].normal = header.path.cStr;
 }
 
 Mesh* MayaViewer::createMesh(const MeshInfoHeader& info, void* data)
