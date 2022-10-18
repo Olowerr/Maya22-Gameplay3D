@@ -165,8 +165,6 @@ xcopy ..\..\..\GamePlay-master\gameplay\res\ui res\ui\* /s /y /d</Command>
     </None>
     <None Include="game.config" />
     <None Include="icon.png" />
-    <None Include="normTex.frag" />
-    <None Include="normTex.vert" />
     <None Include="res\demo.fbx" />
     <None Include="res\demo.gpb" />
     <None Include="res\demo.material" />
@@ -179,6 +177,8 @@ xcopy ..\..\..\GamePlay-master\gameplay\res\ui res\ui\* /s /y /d</Command>
     <None Include="res\shaders\form.vert" />
     <None Include="res\shaders\lighting.frag" />
     <None Include="res\shaders\lighting.vert" />
+    <None Include="res\shaders\normTex.frag" />
+    <None Include="res\shaders\normTex.vert" />
     <None Include="res\shaders\skinning-none.vert" />
     <None Include="res\shaders\skinning.vert" />
     <None Include="res\shaders\sprite.frag" />

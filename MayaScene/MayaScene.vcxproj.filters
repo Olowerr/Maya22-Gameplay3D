@@ -76,10 +76,10 @@
     <None Include="res\shaders\textured.vert">
       <Filter>res\shaders</Filter>
     </None>
-    <None Include="normTex.frag">
+    <None Include="res\shaders\normTex.frag">
       <Filter>res\shaders</Filter>
     </None>
-    <None Include="normTex.vert">
+    <None Include="res\shaders\normTex.vert">
       <Filter>res\shaders</Filter>
     </None>
   </ItemGroup>
