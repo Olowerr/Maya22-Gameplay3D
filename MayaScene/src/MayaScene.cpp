@@ -336,9 +336,18 @@ void MayaViewer::setShadingParameters(Material* pMaterial)
 	pMaterial->getStateBlock()->setDepthWrite(true);
 }
 
-void MayaViewer::createTexturedMaterial(Model* pModel)
+void MayaViewer::createTexturedMaterial(Model* pModel, bool diffuse)
 {
-	Material* pMat = pModel->setMaterial("res/shaders/textured.vert", "res/shaders/textured.frag", "POINT_LIGHT_COUNT 1");
+	Material* pMat;
+	if (diffuse)
+	{
+		pMat = pModel->setMaterial("res/shaders/normTex.vert", "res/shaders/normTex.frag", "POINT_LIGHT_COUNT 1");
+	}
+	else
+	{
+		pMat = pModel->setMaterial("res/shaders/textured.vert", "res/shaders/textured.frag", "POINT_LIGHT_COUNT 1");
+	}
+
 	pMat->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
 	pMat->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
 	pMat->getParameter("u_ambientColor")->setValue(Vector3(0.1f, 0.1f, 0.1f));
@@ -654,7 +663,8 @@ void MayaViewer::attachMaterial(const char* nodeName, const char* materialName)
 	}
 	else
 	{
-		createTexturedMaterial(pModel);
+		bool diffuse = mat->second.normal != "";
+		createTexturedMaterial(pModel, diffuse);
 
 		if (mat->second.diffuse != "")
 		{
@@ -755,13 +765,17 @@ void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materi
 				if (pMaterial)
 					SAFE_RELEASE(pMaterial);
 
-				createTexturedMaterial(pModel);
+				bool diffuse = mat->second.normal != "";
+				createTexturedMaterial(pModel, diffuse);
 
 			}
 			if (!mat->second.colored)
 			{
 				if (!pMaterial)
-					createTexturedMaterial(pModel);
+				{
+					bool diffuse = mat->second.normal != "";
+					createTexturedMaterial(pModel, diffuse);
+				}
 			}
 
 			if (diffuse)

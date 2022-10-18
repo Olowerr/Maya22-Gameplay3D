@@ -99,7 +99,7 @@ private:
 
     void setShadingParameters(Material* pModel);
 
-    void createTexturedMaterial(Model* pModel);
+    void createTexturedMaterial(Model* pModel, bool diffuse);
     void createColoredMaterial(Model* pModel);
 
     void createNode(const MeshInfoHeader& header, void* pMeshData, const char* nodeName);

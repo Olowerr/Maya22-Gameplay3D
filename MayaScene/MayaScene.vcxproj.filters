@@ -76,6 +76,12 @@
     <None Include="res\shaders\textured.vert">
       <Filter>res\shaders</Filter>
     </None>
+    <None Include="normTex.frag">
+      <Filter>res\shaders</Filter>
+    </None>
+    <None Include="normTex.vert">
+      <Filter>res\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\MayaScene.h">
