@@ -348,17 +348,6 @@ inline bool sendUpdateMesh(unsigned int index, const MObject& node, Comlib* pCom
 	pComlib->Send((char*)&header, &secHeader);
 
 	return true;
-
-
-	//std::cout << "Indicies:\n";
-	//printIntArray(indicies);
-	//std::cout << "\nPoints:\n";
-	//printFloatArray(points);
-	//printIntArray(vertexIds);
-	//std::cout <<"\nNormals:\n";
-	//printFloatArray(normals);
-	//printIntArray(normalIds);
-
 }
 
 inline bool SendTransformData(const MObject& obj, Comlib* pComlib)
@@ -481,8 +470,6 @@ inline bool sendColorValues(const MFnLambertShader& shader, const char* material
 		secHeader.messageID = 0;
 		pComlib->Send(msg, &secHeader);
 
-		std::cout << "Sent colour | " << materialName << std::endl;
-
 		delete[]msg;
 
 		return true;
@@ -491,14 +478,9 @@ inline bool sendColorValues(const MFnLambertShader& shader, const char* material
 	return false;
 }
 
-inline bool sendColorTexture(const MObject& textureNode, const char* materialName, Comlib* pComlib)
+inline bool sendColorTexture(const char* texturePath, const char* materialName, Comlib* pComlib)
 {
-	MFnDependencyNode texture(textureNode);
-	MPlug file = texture.findPlug("ftn", false);
-	MString filename;
-	file.getValue(filename);
-
-	TextureDataHeader colorTexture{ filename.asChar() };
+	TextureDataHeader colorTexture{ texturePath };
 
 	SectionHeader secHeader;
 	secHeader.header = COLOR_TEXTURE;
@@ -507,19 +489,12 @@ inline bool sendColorTexture(const MObject& textureNode, const char* materialNam
 
 	pComlib->Send((char*)&colorTexture, &secHeader);
 
-	std::cout << "Sent colour texture | " << materialName << std::endl;
-
 	return true;
 }
 
-inline bool sendNormalTexture(MObject& textureNode, const char* materialName, Comlib* pComlib)
+inline bool sendNormalTexture(const char* texturePath, const char* materialName, Comlib* pComlib)
 {
-	MFnDependencyNode texture(textureNode);
-	MPlug file = texture.findPlug("ftn", false);
-	MString filename;
-	file.getValue(filename);
-
-	TextureDataHeader colorTexture{ filename.asChar() };
+	TextureDataHeader colorTexture{ texturePath };
 
 	SectionHeader secHeader;
 	secHeader.header = NORMAL_TEXTURE;
@@ -527,8 +502,6 @@ inline bool sendNormalTexture(MObject& textureNode, const char* materialName, Co
 	secHeader.name = materialName;
 
 	pComlib->Send((char*)&colorTexture, &secHeader);
-
-	std::cout << "Sent normal texture | "<< materialName<<std::endl;
 
 	return true;
 }
@@ -557,7 +530,12 @@ inline bool SendMaterialData(const MFnDependencyNode& material, Comlib* pComlib)
 			MObject obj(lambertCon[0].node());
 			if (obj.hasFn(MFn::kFileTexture))
 			{
-				sendColorTexture(obj, matName, pComlib);
+				MFnDependencyNode texture(obj);
+				MPlug file = texture.findPlug("ftn", false);
+				MString filename;
+				file.getValue(filename);
+
+				sendColorTexture(filename.asChar(), matName, pComlib);
 				hasTexture = true;
 			}
 		}
@@ -565,6 +543,7 @@ inline bool SendMaterialData(const MFnDependencyNode& material, Comlib* pComlib)
 		MPlug normPlug = tempLamb.findPlug("normalCamera", false);
 		normPlug.connectedTo(lambertCon, true, false);
 
+		bool normal = false;
 		if (lambertCon.length() > 0)
 		{
 			if (lambertCon[0].node().hasFn(MFn::kBump))
@@ -579,12 +558,20 @@ inline bool SendMaterialData(const MFnDependencyNode& material, Comlib* pComlib)
 					MObject obj(lambertCon[0].node());
 					if (obj.hasFn(MFn::kFileTexture))
 					{
-						sendNormalTexture(obj, matName, pComlib);
-						hasTexture = true;
+						MFnDependencyNode texture(obj);
+						MPlug file = texture.findPlug("ftn", false);
+						MString filename;
+						file.getValue(filename);
+
+						sendNormalTexture(filename.asChar(), matName, pComlib);
+						normal = true;
 					}
 				}
 			}
 		}
+
+		if (!normal)
+			sendNormalTexture("", matName, pComlib);
 
 		if (!hasTexture)
 		{
@@ -671,9 +658,6 @@ inline bool sendAttachedMaterial(const MObject& node, Comlib* pComlib)
 	secHeader.header = MESH_MATERIAL;
 
 	pComlib->Send((char*)&header, &secHeader);
-	std::cout << nodeName << " | " << materialName << " | sendAttachedMaterial\n";
-
-	return true;
 
 	return true;
 }

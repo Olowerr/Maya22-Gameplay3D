@@ -14,6 +14,14 @@ MStatus status = MS::kSuccess;
 #define PRINT_EXTRA 0
 #define PRINT_SENDS 1
 
+/*
+	IF FILE-NODE EXISTS BEFORE HAND BUT NOT CONNECTED TO ANYTHING IT'LL NOT SET ANY CALLBACKS
+	IF FILE-NODE EXISTS BEFORE HAND BUT NOT CONNECTED TO ANYTHING IT'LL NOT SET ANY CALLBACKS
+	IF FILE-NODE EXISTS BEFORE HAND BUT NOT CONNECTED TO ANYTHING IT'LL NOT SET ANY CALLBACKS
+	IF FILE-NODE EXISTS BEFORE HAND BUT NOT CONNECTED TO ANYTHING IT'LL NOT SET ANY CALLBACKS
+	IF FILE-NODE EXISTS BEFORE HAND BUT NOT CONNECTED TO ANYTHING IT'LL NOT SET ANY CALLBACKS
+*/
+
 void addCallback(const std::string& name, MCallbackId id)
 {
 	static int i = 0;
@@ -77,12 +85,6 @@ void removeCallback(const std::string& name)
 
 void meshAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* clientData)
 {
-#if PRINT_EXTRA
-	std::cout << "MESH ATTRI | ";
-	PRINT_MSG(msg);
-	printPlugPath(plug);
-	printPlugPath(otherPlug);
-#endif
 	if (msg & MNodeMessage::AttributeMessage::kAttributeSet)
 	{
 		MFnMesh mesh(plug.node(), &status);
@@ -94,43 +96,14 @@ void meshAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug
 
 		if (plugName.find(".pnts[") != -1)
 		{
-#if PRINT_SENDS
-			std::cout << nodeName << " | Updating mesh attribute\n";
-#endif
-			if (!sendUpdateMesh(plug.logicalIndex(), plug.node(), producerBuffer))
-				std::cout << nodeName << " | Failed updating mesh attribute\n";
+			sendUpdateMesh(plug.logicalIndex(), plug.node(), producerBuffer);
 		}
 
 	}
-	/*else if (msg & MNodeMessage::AttributeMessage::kAttributeEval)
-	{
-		MFnMesh mesh(plug.node(), &status);
-		if (M_FAIL2)
-			return;
-
-		std::string nodeName = mesh.name().asChar();
-		std::string plugName = plug.name().asChar();
-
-		if (plugName.find(".outMesh") != -1)
-		{
-			std::cout << "OUT MESH\n";
-		}
-	}*/
-
-#if PRINT_EXTRA
-	std::cout << "\n";
-#endif
 }
 
 void meshTopoAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* clientData)
 {
-#if PRINT_EXTRA
-	std::cout << "TOPO ATTRI | ";
-	PRINT_MSG(msg);
-	printPlugPath(plug);
-	printPlugPath(otherPlug);
-#endif
-
 	if (msg & MNodeMessage::AttributeMessage::kAttributeEval)
 	{
 		MFnMesh mesh(plug.node(), &status);
@@ -142,113 +115,171 @@ void meshTopoAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 			if (plugName.find(".outMesh") != -1)
 			{
 				removeCallback(nodeName + "meshTopoAttriCB");
-#if PRINT_SENDS
-				std::cout << nodeName << " | Updating mesh topology...\n";
-#endif
-				if (!sendMesh(plug.node(), producerBuffer))
-					std::cout << nodeName << " | Failed updating mesh topology...\n";
+				sendMesh(plug.node(), producerBuffer);	
 			}
 		}
 	}
-
-#if PRINT_EXTRA
-	std::cout << "\n";
-#endif
 }
 
-void materialDirtyPlug(MObject& node, MPlug& plug, void* clientData)
+void fileTextureAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* clientData)
 {
-	if (node.hasFn(MFn::kLambert))
+	// Early out if a connection was changed and otherPlug.node() is the material
+	if (msg & MNodeMessage::kConnectionBroken || msg & MNodeMessage::kConnectionMade)
 	{
-		MFnDependencyNode material(plug.node());
-		std::cout << material.name() << std::endl;
-
-		MFnLambertShader lambert(node, &status);
-		if (M_OK2)
+		if (otherPlug.node().hasFn(MFn::kLambert))
 		{
-
+			SendMaterialData(MFnDependencyNode(otherPlug.node()), producerBuffer);
+			return;
 		}
 	}
-}
 
-void diffuseTexAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* clientData)
-{
-	if (msg & MNodeMessage::kAttributeSet)
+	if (msg & MNodeMessage::kAttributeSet || msg & MNodeMessage::kConnectionMade)
 	{
 		MFnDependencyNode dgNode(plug.node(), &status);
 		if (M_FAIL2)
 			return;
 
-
 		MPlug plug = dgNode.findPlug("outColor", false, &status);
-		if (M_FAIL2)
-			return;
-
-		MPlugArray connections;
-		plug.connectedTo(connections, false, true, &status);
-		if (M_FAIL2)
-			return;
-
-
-		for (int i = 0; i < connections.length(); i++)
+		if (M_OK2)
 		{
-			if (connections[i].node().hasFn(MFn::kLambert))
+			MPlugArray connections;
+			plug.connectedTo(connections, false, true, &status);
+
+			if (M_OK2)
 			{
-				MFnDependencyNode material(connections[i].node(), &status);
-				if (M_OK2)
+				for (unsigned int i = 0; i < connections.length(); i++)
 				{
-					SendMaterialData(material, producerBuffer);
+					MObject curNode = connections[i].node();
+
+					if (curNode.hasFn(MFn::kLambert))
+					{
+						SendMaterialData(MFnDependencyNode(curNode), producerBuffer);
+					}
+				}
+			}
+		}
+
+		plug = dgNode.findPlug("outAlpha", false, &status);
+		if (M_OK2)
+		{
+			MPlugArray connections;
+			plug.connectedTo(connections, false, true, &status);
+
+			if (M_OK2)
+			{
+				for (unsigned int i = 0; i < connections.length(); i++)
+				{
+					MObject curNodeI = connections[i].node();
+					if (curNodeI.hasFn(MFn::kBump))
+					{
+						MFnDependencyNode dgBumpNode(curNodeI, &status);
+						if (M_FAIL2)
+							continue;
+
+						plug = dgBumpNode.findPlug("outNormal", false, &status);
+						if (M_FAIL2)
+							continue;
+
+						plug.connectedTo(connections, false, true, &status);
+						if (M_FAIL2)
+							continue;
+
+						for (unsigned int j = 0; j < connections.length(); j++)
+						{
+							MObject curNodeJ = connections[j].node();
+							if (curNodeJ.hasFn(MFn::kLambert))
+							{
+								SendMaterialData(MFnDependencyNode(curNodeJ), producerBuffer);
+								continue;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (msg & MNodeMessage::kConnectionBroken)
+	{
+		if (otherPlug.node().hasFn(MFn::kBump))
+		{
+			MFnDependencyNode bumpNode(otherPlug.node());
+
+			MPlug plug = bumpNode.findPlug("outNormal", false, &status);
+			if (M_FAIL2)
+				return;
+
+			MPlugArray connections;
+			plug.connectedTo(connections, false, true, &status);
+			if (M_FAIL2)
+				return;
+
+			for (unsigned int i = 0; i < connections.length(); i++)
+			{
+				if (connections[i].node().hasFn(MFn::kLambert))
+				{
+					MFnDependencyNode lambert(connections[i].node(), &status);
+					if (M_OK2)
+						SendMaterialData(lambert, producerBuffer);
 				}
 			}
 		}
 	}
 }
 
-void normalMapAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* clientData)
+void setFileCallbacks(MObject& materialNode)
 {
-	if (msg & MNodeMessage::kAttributeSet)
+	if (materialNode.hasFn(MFn::kLambert))
 	{
-		MFnDependencyNode dgNode(plug.node(), &status);
+		MFnLambertShader tempLamb(materialNode, &status);
 		if (M_FAIL2)
 			return;
 
-		MPlug plug = dgNode.findPlug("outAlpha", false, &status);
-		if (M_FAIL2)
-			return;
+		const char* matName = tempLamb.name().asChar();
 
-		MPlugArray connections;
-		plug.connectedTo(connections, false, true, &status);
-		if (M_FAIL2)
-			return;
+		MPlugArray lambertCon;
+		MPlug lambertPlug = tempLamb.findPlug("color", false);
+		lambertPlug.connectedTo(lambertCon, true, false);
+		bool hasTexture = false;
 
-		for (int i = 0; i < connections.length(); i++)
+		if (lambertCon.length() > 0)
 		{
-			if (connections[i].node().hasFn(MFn::kBump))
+			MObject obj(lambertCon[0].node());
+			if (obj.hasFn(MFn::kFileTexture))
 			{
-				MFnDependencyNode bumpNode(connections[i].node(), &status);
-				if (M_FAIL2)
-					continue;
-
-				plug = bumpNode.findPlug("outNormal", false, &status);
-				if (M_FAIL2)
-					continue;
-
-				break;
+				MCallbackId id = MNodeMessage::addAttributeChangedCallback(obj, fileTextureAttributeChanged, nullptr, &status);
+				if (M_OK2)
+				{
+					std::string textureNodeName = MFnDependencyNode(obj).name().asChar();
+					addCallbackDelOld(textureNodeName + "FileTextureChanged", id);
+				}
 			}
 		}
 
-		plug.connectedTo(connections, false, true, &status);
-		if (M_FAIL2)
-			return;
+		MPlug normPlug = tempLamb.findPlug("normalCamera", false);
+		normPlug.connectedTo(lambertCon, true, false);
 
-		for (int i = 0; i < connections.length(); i++)
+		if (lambertCon.length() > 0)
 		{
-			if (connections[i].node().hasFn(MFn::kLambert))
+			if (lambertCon[0].node().hasFn(MFn::kBump))
 			{
-				MFnDependencyNode material(connections[i].node(), &status);
-				if (M_OK2)
+				MFnDependencyNode bump(lambertCon[0].node());
+
+				MPlug bumpPlug = bump.findPlug("bumpValue", false);
+				bumpPlug.connectedTo(lambertCon, true, false);
+
+				if (lambertCon.length() > 0)
 				{
-					SendMaterialData(material, producerBuffer);
+					MObject obj(lambertCon[0].node());
+					if (obj.hasFn(MFn::kFileTexture))
+					{
+						MCallbackId id = MNodeMessage::addAttributeChangedCallback(obj, fileTextureAttributeChanged, nullptr, &status);
+						if (M_OK2)
+						{
+							std::string textureNodeName = MFnDependencyNode(obj).name().asChar();
+							addCallbackDelOld(textureNodeName + "FileTextureChanged", id);
+						}
+					}
 				}
 			}
 		}
@@ -257,7 +288,7 @@ void normalMapAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, 
 
 void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* x)
 {
-	if (msg & MNodeMessage::kConnectionMade)
+	if (msg & MNodeMessage::kConnectionMade || msg & MNodeMessage::kConnectionBroken)
 	{
 		MObject node = plug.node();
 		MObject otherNode = otherPlug.node();
@@ -265,32 +296,14 @@ void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 
 		if (otherNode.hasFn(MFn::kShadingEngine))
 		{
-			MFnDependencyNode material(otherPlug.node());
-
-			SendMaterialData(material, producerBuffer);
-
-			/*MFnMesh mesh(plug.node(), &status);
-			MFnDagNode dag(mesh.parent(0), &status);
-			std::string nodeName = dag.name(&status).asChar();
-
-			MCallbackId id = MNodeMessage::addNodeDirtyPlugCallback(connection, materialDirtyPlug, nullptr, &status);
-			if (M_OK2)
-				addCallback(nodeName + "DirtyMaterialPlug", id);*/
-		}
-
-		if (otherNode.hasFn(MFn::kFileTexture))
-		{
-			MCallbackId id = MNodeMessage::addAttributeChangedCallback(otherNode, diffuseTexAttributeChanged, nullptr, &status);
-			if (M_OK2)
-			{
-				std::string textureNodeName = MFnDependencyNode(otherPlug.node()).name().asChar();
-				addCallback(textureNodeName + "FileTextureChanged", id);
-			}
+			SendMaterialData(material, producerBuffer); 
 		}
 
 		if (otherNode.hasFn(MFn::kBump))
 		{
-			MFnDependencyNode bumpNode(otherNode, &status);
+			SendMaterialData(material, producerBuffer);
+
+			/*MFnDependencyNode bumpNode(otherNode, &status);
 			if (M_OK2)
 			{
 				MPlugArray plugArr;
@@ -302,57 +315,29 @@ void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 					MObject obj(plugArr[i].node());
 					if (obj.hasFn(MFn::kFileTexture))
 					{
-						MCallbackId id = MNodeMessage::addAttributeChangedCallback(obj, normalMapAttributeChanged, nullptr, &status);
+						MCallbackId id = MNodeMessage::addAttributeChangedCallback(obj, fileTextureAttributeChanged, nullptr, &status);
 						if (M_OK2)
 						{
 							std::string textureNodeName = MFnDependencyNode(obj).name().asChar();
-							addCallback(textureNodeName + "FileTextureChanged", id);
+							addCallbackDelOld(textureNodeName + "FileTextureChanged", id);
 						}
 						break;
+
 					}
 				}
-			}
+			}*/
 		}
+
+
 	}
 	else if (msg & MNodeMessage::kAttributeSet)
 	{
 		if (plug.node().hasFn(MFn::kLambert))
 		{
 			MFnDependencyNode material(plug.node());
-
 			SendMaterialData(material, producerBuffer);
 		}
-
 	}
-	//if (msg & MNodeMessage::kAttributeSet)
-	//{
-	//	cout << "hej" << endl;
-	//	if (otherPlug.node().hasFn(MFn::kLambert))
-	//	{
-	//		cout << "hej" << endl;
-	//		MFnDependencyNode material(otherPlug.node());
-	//		std::cout << material.name() << std::endl;
-
-	//		MPlugArray connections;
-	//		MPlug shaderPlug = material.findPlug("surfaceShader", false);
-	//		shaderPlug.connectedTo(connections, true, false);
-
-	//		for (size_t i = 0; i < connections.length(); i++)
-	//		{
-	//			MObject connection(connections[i].node());
-	//			if (connection.hasFn(MFn::kLambert))
-	//			{
-	//				MFnLambertShader tempLamb(connection);
-	//				std::cout << "Lambert material name: " << tempLamb.name() << std::endl;
-	//				tempLamb.hasAttribute("Color", &status);
-	//				if (M_OK2)
-	//				{
-	//					SendMaterialData(tempLamb, producerBuffer, plug.node());
-	//				}
-	//			}
-	//		}
-	//	}
-	//}
 }
 
 void meshSetMaterial(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* x)
@@ -380,11 +365,6 @@ void meshTopoChanged(MObject& node, void* clientData)
 
 void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 {
-#if PRINT_EXTRA
-	std::cout << "MESH DIRTY | ";
-	printPlugPath(plug);
-#endif
-
 	MFnMesh mesh(node, &status);
 	if (M_OK2)
 	{
@@ -393,13 +373,8 @@ void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 		if (std::string(plug.name().asChar()).find(".inMesh") != -1)
 		{
 			removeCallback(nodeName + "DirtyPlug");
-#if PRINT_SENDS
-			std::cout << nodeName << " | Sending mesh\n";
-#endif
 
-			if (!sendMesh(node, producerBuffer))
-				std::cout << nodeName << " | Failed creating mesh...\n";
-
+			sendMesh(node, producerBuffer);
 
 			MCallbackId id = MNodeMessage::addAttributeChangedCallback(node, meshSetMaterial, nullptr, &status);
 			if (M_OK2)
@@ -408,10 +383,6 @@ void meshDirtyPlug(MObject& node, MPlug& plug, void* clientData)
 			sendAttachedMaterial(node, producerBuffer);
 		}
 	}
-
-#if PRINT_EXTRA
-	std::cout << "\n";
-#endif
 }
 
 void transformAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* x)
@@ -439,8 +410,6 @@ void nodeNameChange(MObject& node, const MString& prevName, void* clientData)
 	MFnTransform traNode(node, &status);
 	if (M_OK2)
 	{
-		// Could just create a CharString...
-
 		NameChangeHeader nameChange;
 		nameChange.newName = traNode.name(&status).asChar();
 		if (M_FAIL2)
@@ -459,6 +428,28 @@ void iterateScene()
 {
 	MCallbackId id;
 
+	// FILE TEXTURE
+	MItDependencyNodes fileIterator(MFn::kFileTexture, &status);
+	if (M_OK2)
+	{
+		for (; !fileIterator.isDone(); fileIterator.next())
+		{
+			MFnDependencyNode dgNode(fileIterator.thisNode(), &status);
+			if (M_FAIL2)
+				continue;
+
+			MObject node = fileIterator.thisNode();
+
+			MCallbackId id = MNodeMessage::addAttributeChangedCallback(node, fileTextureAttributeChanged, nullptr, &status);
+			if (M_OK2)
+			{
+				std::string textureNodeName = dgNode.name().asChar();
+				addCallbackDelOld(textureNodeName + "FileTextureChanged", id);
+			}
+		}
+	}
+
+	// MATERIALS
 	MItDependencyNodes matIterator(MFn::kLambert, &status);
 	if (M_OK2)
 	{
@@ -471,11 +462,10 @@ void iterateScene()
 			id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
 			if (M_OK2)
 				addCallback(name + "MaterialChanged", id);
-			else
-				std::cout << name << " | Failed creating material...\n";
+
+			//setFileCallbacks(node);
 
 			SendMaterialData(dgNode, producerBuffer);
-
 		}
 	}
 
@@ -498,23 +488,12 @@ void iterateScene()
 			if (M_OK2)
 				addCallback(name + "AttriChanged", id);
 
-			/*id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
-			if (M_OK2)
-				addCallback(name + "MaterialChanged", id);
-
-			id = MNodeMessage::addNodeDirtyPlugCallback(node, materialDirtyPlug, nullptr, &status);
-			if (M_OK2)
-				addCallback(name + "DirtyMaterialPlug", id);*/
-
 			MCallbackId id = MNodeMessage::addAttributeChangedCallback(node, meshSetMaterial, nullptr, &status);
 			if (M_OK2)
 				addCallback(name + "MeshMatAttriChanged", id);
 
-			if (!sendMesh(node, producerBuffer))
-				std::cout << name << " | Failed creating mesh...\n";
-
-			if (!sendAttachedMaterial(node, producerBuffer))
-				std::cout << name << " | Failed sending material...\n";
+			sendMesh(node, producerBuffer);
+			sendAttachedMaterial(node, producerBuffer);
 		}
 	}
 
@@ -536,19 +515,10 @@ void iterateScene()
 				if (M_OK2)
 					addCallback(name + "TranformChanged", id);
 
-				if (!SendTransformData(node, producerBuffer))
-					std::cout << name << " | Failed sending transform...\n";
+				SendTransformData(node, producerBuffer);
 			}
 		}
 	}
-
-	/*
-		not sending normal map during run time
-		not sending normal map during run time
-		not sending normal map during run time
-	*/
-
-
 
 	M3dView view = M3dView::active3dView();
 	sendCamera(view, producerBuffer);
@@ -617,6 +587,7 @@ void nodeAdded(MObject& node, void* clientData)
 			if (M_OK2)
 				addCallback(name + "TranformChanged", id);
 		}
+
 	}
 
 	MFnDependencyNode dgNode(node, &status);
@@ -627,16 +598,22 @@ void nodeAdded(MObject& node, void* clientData)
 
 		if (node.hasFn(MFn::kLambert))
 		{
-			//id = MNodeMessage::addNodeDirtyPlugCallback(node, materialDirtyPlug, nullptr, &status);
-			//if (M_OK2)
-			//	addCallback(name + "DirtyMaterialPlug", id);
-
+			//setFileCallbacks(node);
 			id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
 			if (M_OK2)
 				addCallback(name + "MaterialChanged", id);
 
-			SendMaterialData(dgNode, producerBuffer);
+			//SendMaterialData(material, producerBuffer);
 		}
+
+		if (node.hasFn(MFn::kFileTexture))
+		{
+			id = MNodeMessage::addAttributeChangedCallback(node, fileTextureAttributeChanged, nullptr, &status);
+			if (M_OK2)
+				addCallbackDelOld(name + "FileTextureChanged", id);
+			
+		}
+
 	}
 
 }
@@ -701,7 +678,6 @@ EXPORT MStatus uninitializePlugin(MObject obj)
 
 	for (auto& id : callbacks)
 	{
-		std::cout << "Unloading \"" << id.first << "\" with ID: " << id.second << std::endl;
 		MMessage::removeCallback(id.second);
 	}
 

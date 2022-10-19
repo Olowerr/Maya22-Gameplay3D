@@ -133,35 +133,6 @@ void MayaViewer::update(float elapsedTime)
 				OutputDebugString(L"TRANSFORM_DATA | Could not find node...\n");
 
 			break;
-
-			/*size_t sizeTrans = strlen(mainHeader->name) + 1;
-			wchar_t* transStr = new wchar_t[sizeTrans] {};
-			mbstowcs(transStr, mainHeader->name, sizeTrans);
-
-			std::wstring printThis =
-				L" - Translate: " +
-				std::to_wstring(translate->x) + L", " +
-				std::to_wstring(translate->y) + L", " +
-				std::to_wstring(translate->z) + L"\n";
-
-			std::wstring printMe =
-				L" - Scale: " +
-				std::to_wstring(scale->x) + L", " +
-				std::to_wstring(scale->y) + L", " +
-				std::to_wstring(scale->z) + L"\n";
-
-			std::wstring printDat =
-				L" - Rotate: " +
-				std::to_wstring(rotation->x) + L", " +
-				std::to_wstring(rotation->y) + L", " +
-				std::to_wstring(rotation->z) + L"\n";
-
-			OutputDebugStringW(transStr);
-			OutputDebugStringW(printThis.c_str());
-			OutputDebugStringW(printMe.c_str());
-			OutputDebugStringW(printDat.c_str());
-
-			delete[]transStr;*/
 		}
 		case MESH_MATERIAL:
 		{
@@ -661,10 +632,18 @@ void MayaViewer::attachMaterial(const char* nodeName, const char* materialName)
 
 	Material* pMaterial = pModel->getMaterial();
 
+
+	// Materials with no diffuse but normal map, will be seen as colored, and wont try applying the normal map
 	if (mat->second.colored)
 	{
 		createColoredMaterial(pModel);
 		pModel->getMaterial()->getParameter("u_diffuseColor")->setValue(mat->second.color);
+
+#if weHadColoredNormalMapShader
+		Texture::Sampler* pSampler = pModel->getMaterial()->getParameter("u_normalmapTexture")->setValue(mat->second.normal.c_str(), true);
+		pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
+#endif
+
 	}
 	else
 	{
@@ -699,11 +678,8 @@ void MayaViewer::setMaterial(const MaterialDataHeader& header, const char* mater
 			found = true;
 	}
 
-	if (!found)
-	{
-		materials[materialName].colored = true;
-		materials[materialName].color = color;
-	}
+	materials[materialName].color = color;
+	materials[materialName].colored = true;
 
 	for (auto& node : nodes)
 	{
@@ -717,18 +693,12 @@ void MayaViewer::setMaterial(const MaterialDataHeader& header, const char* mater
 			if (!pModel)
 				continue;
 
-			Material* pMaterial = pModel->getMaterial();
-
-			if (!pMaterial)
-				createColoredMaterial(pModel);
+			createColoredMaterial(pModel);
 
 			pModel->getMaterial()->getParameter("u_diffuseColor")->setValue(color);
-
 		}
 	}
 
-	materials[materialName].colored = true;
-	materials[materialName].color = color;
 }
 
 void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materialName, bool diffuse)
@@ -744,6 +714,8 @@ void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materi
 	else
 		materials[materialName].normal = header.path.cStr;
 
+
+	// Materials with no diffuse but normal map will be seen as colored, and not try to apply the textures
 	auto& mat = materials.find(materialName);
 	for (auto& node : nodes)
 	{
@@ -756,9 +728,6 @@ void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materi
 			Model* pModel = dynamic_cast<Model*>(pNode->getDrawable());
 			if (!pModel)
 				continue;
-
-			Material* pMaterial = pModel->getMaterial();
-
 
 			bool hasNormal = mat->second.normal != "";
 			createTexturedMaterial(pModel, hasNormal);
@@ -774,8 +743,6 @@ void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materi
 				Texture::Sampler* pSampler = pModel->getMaterial()->getParameter("u_normalmapTexture")->setValue(mat->second.normal.c_str(), true);
 				pSampler->setFilterMode(Texture::LINEAR_MIPMAP_LINEAR, Texture::LINEAR);
 			}
-
-
 		}
 	}
 
