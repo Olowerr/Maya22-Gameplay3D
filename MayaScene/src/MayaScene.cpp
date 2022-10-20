@@ -300,7 +300,6 @@ void MayaViewer::recreateMesh(const MeshInfoHeader& header, void* pMeshData, con
 		return;
 	}
 
-	//setMatDefaults(pModel);
 	pModel->setMaterial(pMaterial);
 	pNode->setDrawable(pModel);
 
@@ -333,8 +332,6 @@ void MayaViewer::updateMesh(char* meshData, const MeshInfoHeader& meshInfo, cons
 	
 
 	const size_t vertexBytes = meshInfo.numVertex * sizeof(Vertex);
-
-	//pMesh->setVertexData()
 
 	void* pOldVertexData = pMesh->mapVertexBuffer();
 	memcpy(pOldVertexData, meshData, vertexBytes);
@@ -592,12 +589,6 @@ void MayaViewer::setMaterial(const TextureDataHeader& header, const char* materi
 
 Mesh* MayaViewer::createMesh(const MeshInfoHeader& info, void* data)
 {
-	std::vector<Vertex> verts(info.numVertex);
-	std::vector<int> inds(info.numIndex);
-
-	memcpy(verts.data(), data, sizeof(Vertex) * verts.size());
-	memcpy(inds.data(), (char*)data + sizeof(Vertex) * verts.size(), sizeof(int) * inds.size());
-
 	VertexFormat::Element elements[] =
 	{
 		VertexFormat::Element(VertexFormat::POSITION, 3),
