@@ -91,13 +91,10 @@ private:
 
     // Helpers
     Mesh* createMesh(const MeshInfoHeader& info, void* data);
-	Mesh* createCubeMesh(float size = 1.0f);
 
     void attachMaterial(const char* nodeName, const char* materialName);
 	void setMaterial(const MaterialDataHeader& header, const char* materialName);
 	void setMaterial(const TextureDataHeader& header, const char* materialName, bool diffuse);
-
-    void setShadingParameters(Material* pModel);
 
     void createTexturedMaterial(Model* pModel, bool diffuse);
     void createColoredMaterial(Model* pModel);
@@ -110,13 +107,7 @@ private:
 
     Camera* createCamera(const CameraHeader& cameraHeader);
 
-    // temp
     Light* light;
-
-    Material* pMaterial;
-
-    void foo();
-
 };
 
 #endif

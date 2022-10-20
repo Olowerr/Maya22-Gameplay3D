@@ -3,7 +3,6 @@
 // Declare our game instance
 MayaViewer game;
 
-constexpr int gModelCount = 10;
 static bool gKeys[256] = {};
 int gDeltaX;
 int gDeltaY;
@@ -40,48 +39,6 @@ void MayaViewer::initialize()
 	light = Light::createPoint(Vector3(1.f, 1.0f, 1.0f), 50);
 	lightNode->setLight(light);
 	lightNode->translate(Vector3(0, 1, 5));
-
-	//Mesh* mesh1 = createCubeMesh(5.0);
-
-	//pMaterial = Material::create("res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
-	//setShadingParameters(pMaterial);
-
-	//Model* models[gModelCount];
-	//char nodeName[10] = {};
-	//for (int i = 0; i < gModelCount; i++)
-	//{
-	//	models[i] = Model::create(mesh1);
-	//	models[i]->setMaterial(pMaterial);
-
-	//	sprintf(nodeName, "cube%d", i);
-	//	Node* node = _scene->addNode(nodeName);
-	//	node->setDrawable(models[i]);
-	//	//SAFE_RELEASE(models[i]);
-	//}
-
-	/*Model* models[gModelCount];
-	Material* mats[gModelCount];
-	Texture::Sampler* samplers[gModelCount];
-	char nodeName[10] = {};
-	for (int i = 0; i < gModelCount; i++)
-	{
-		models[i] = Model::create(mesh1);
-		mats[i] = models[i]->setMaterial( "res/shaders/colored.vert", "res/shaders/colored.frag", "POINT_LIGHT_COUNT 1");
-		mats[i]->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
-		mats[i]->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
-		mats[i]->getParameter("u_ambientColor")->setValue(Vector3(0.4f, 0.1f, 1.f));
-		mats[i]->getParameter("u_diffuseColor")->setValue(Vector4(0.1f, 1.f, 1.f, 1.f));
-		mats[i]->getParameter("u_pointLightColor[0]")->setValue(lightNode->getLight()->getColor());
-		mats[i]->getParameter("u_pointLightPosition[0]")->bindValue(lightNode, &Node::getTranslationWorld);
-		mats[i]->getParameter("u_pointLightRangeInverse[0]")->bindValue(lightNode->getLight(), &Light::getRangeInverse);
-		mats[i]->getStateBlock()->setCullFace(true);
-		mats[i]->getStateBlock()->setDepthTest(true);
-		mats[i]->getStateBlock()->setDepthWrite(true);
-		sprintf(nodeName, "cube%d", i);
-		Node* node = _scene->addNode(nodeName);
-		node->setDrawable(models[i]);
-		SAFE_RELEASE(models[i]);
-	}*/
 }
 
 void MayaViewer::finalize()
@@ -181,7 +138,9 @@ void MayaViewer::update(float elapsedTime)
 		{
 			CameraHeader camHeader;
 			memcpy(&camHeader, msg, sizeof(CameraHeader));
+
 			setCamera(camHeader, mainHeader->name);
+
 			break;
 		}
 		case NODE_DELETE:
@@ -199,60 +158,18 @@ void MayaViewer::update(float elapsedTime)
 			{
 				NameChangeHeader name;
 				memcpy(&name, msg, sizeof(NameChangeHeader));
+
 				pNode->setId(name.newName);
 			}
 			break;
 		}
 		}
 
-
 		if (msg)
 		{
 			delete[] msg;
 			msg = nullptr;
 		}
-
-	}
-	if (gKeys[Keyboard::KEY_E])
-		foo();
-
-	return;
-
-
-	static float totalTime = 0;
-	totalTime += elapsedTime;
-	float step = 360.0 / float(gModelCount);
-	char name[10] = {};
-
-	for (int i = 0; i < gModelCount; i++)
-	{
-		sprintf(name, "cube%d", i);
-		Node* node = _scene->findNode(name);
-		if (node) {
-			node->setScale(0.3f);
-			node->setTranslation(
-				cosf(MATH_DEG_TO_RAD(((int)totalTime / 10) % 360 + i * step)) * 5.0,
-				sinf(MATH_DEG_TO_RAD(((int)totalTime / 10) % 360 + i * step)) * 5.0,
-				0.0);
-		}
-		if (i % 2)
-			node->rotateX(elapsedTime / 1000.f);
-	}
-
-	Node* camnode = _scene->getActiveCamera()->getNode();
-	if (gKeys[Keyboard::KEY_W])
-		camnode->translateForward(0.5);
-	if (gKeys[Keyboard::KEY_S])
-		camnode->translateForward(-0.5);
-	if (gKeys[Keyboard::KEY_A])
-		camnode->translateLeft(0.5);
-	if (gKeys[Keyboard::KEY_D])
-		camnode->translateLeft(-0.5);
-
-
-	if (gMousePressed) {
-		camnode->rotate(camnode->getRightVectorWorld(), MATH_DEG_TO_RAD(gDeltaY / 10.0));
-		camnode->rotate(camnode->getUpVectorWorld(), MATH_DEG_TO_RAD(gDeltaX / 5.0));
 	}
 }
 
@@ -262,17 +179,6 @@ Camera* MayaViewer::createCamera(const CameraHeader& cameraHeader)
 	return cameraHeader.perspective ?
 		Camera::createPerspective(cameraHeader.fieldOfView, AspectRatio, 0.1f, 5000.f) :
 		Camera::createOrthographic(cameraHeader.width, cameraHeader.height, AspectRatio, 0.1f, 5000.f);
-}
-
-void MayaViewer::foo()
-{
-	std::vector<Node*> nodes;
-	_scene->findNodes("", nodes, true, false);
-
-
-
-
-	int q = 0;
 }
 
 void MayaViewer::render(float elapsedTime)
@@ -292,19 +198,6 @@ bool MayaViewer::drawScene(Node* node)
 		drawable->draw(_wireframe);
 
 	return true;
-}
-
-void MayaViewer::setShadingParameters(Material* pMaterial)
-{
-	pMaterial->setParameterAutoBinding("u_worldViewProjectionMatrix", "WORLD_VIEW_PROJECTION_MATRIX");
-	pMaterial->setParameterAutoBinding("u_inverseTransposeWorldViewMatrix", "INVERSE_TRANSPOSE_WORLD_VIEW_MATRIX");
-	pMaterial->getParameter("u_ambientColor")->setValue(Vector3(0.2f, 0.2f, 0.2f));
-	pMaterial->getParameter("u_pointLightColor[0]")->setValue(light->getColor());
-	pMaterial->getParameter("u_pointLightPosition[0]")->bindValue(light->getNode(), &Node::getTranslationWorld);
-	pMaterial->getParameter("u_pointLightRangeInverse[0]")->bindValue(light, &Light::getRangeInverse);
-	pMaterial->getStateBlock()->setCullFace(true);
-	pMaterial->getStateBlock()->setDepthTest(true);
-	pMaterial->getStateBlock()->setDepthWrite(true);
 }
 
 void MayaViewer::createTexturedMaterial(Model* pModel, bool hasNormal)
@@ -328,7 +221,6 @@ void MayaViewer::createTexturedMaterial(Model* pModel, bool hasNormal)
 	pMat->getStateBlock()->setCullFace(true);
 	pMat->getStateBlock()->setDepthTest(true);
 	pMat->getStateBlock()->setDepthWrite(true);
-
 }
 
 void MayaViewer::createColoredMaterial(Model* pModel)
@@ -554,66 +446,6 @@ void MayaViewer::touchEvent(Touch::TouchEvent evt, int x, int y, unsigned int co
 		break;
 	};
 }
-
-Mesh* MayaViewer::createCubeMesh(float size)
-{
-	float a = size * 0.5f;
-	float vertices[] =
-	{
-		-a, -a,  a,    0.0,  0.0,  1.0,   0.0, 0.0,
-		a, -a,  a,    0.0,  0.0,  1.0,   1.0, 0.0,
-		-a,  a,  a,    0.0,  0.0,  1.0,   0.0, 1.0,
-		a,  a,  a,    0.0,  0.0,  1.0,   1.0, 1.0,
-		-a,  a,  a,    0.0,  1.0,  0.0,   0.0, 0.0,
-		a,  a,  a,    0.0,  1.0,  0.0,   1.0, 0.0,
-		-a,  a, -a,    0.0,  1.0,  0.0,   0.0, 1.0,
-		a,  a, -a,    0.0,  1.0,  0.0,   1.0, 1.0,
-		-a,  a, -a,    0.0,  0.0, -1.0,   0.0, 0.0,
-		a,  a, -a,    0.0,  0.0, -1.0,   1.0, 0.0,
-		-a, -a, -a,    0.0,  0.0, -1.0,   0.0, 1.0,
-		a, -a, -a,    0.0,  0.0, -1.0,   1.0, 1.0,
-		-a, -a, -a,    0.0, -1.0,  0.0,   0.0, 0.0,
-		a, -a, -a,    0.0, -1.0,  0.0,   1.0, 0.0,
-		-a, -a,  a,    0.0, -1.0,  0.0,   0.0, 1.0,
-		a, -a,  a,    0.0, -1.0,  0.0,   1.0, 1.0,
-		a, -a,  a,    1.0,  0.0,  0.0,   0.0, 0.0,
-		a, -a, -a,    1.0,  0.0,  0.0,   1.0, 0.0,
-		a,  a,  a,    1.0,  0.0,  0.0,   0.0, 1.0,
-		a,  a, -a,    1.0,  0.0,  0.0,   1.0, 1.0,
-		-a, -a, -a,   -1.0,  0.0,  0.0,   0.0, 0.0,
-		-a, -a,  a,   -1.0,  0.0,  0.0,   1.0, 0.0,
-		-a,  a, -a,   -1.0,  0.0,  0.0,   0.0, 1.0,
-		-a,  a,  a,   -1.0,  0.0,  0.0,   1.0, 1.0
-	};
-	short indices[] =
-	{
-		0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7, 8, 9, 10, 10, 9, 11, 12, 13, 14, 14, 13, 15, 16, 17, 18, 18, 17, 19, 20, 21, 22, 22, 21, 23
-	};
-	unsigned int vertexCount = 24;
-	unsigned int indexCount = 36;
-	VertexFormat::Element elements[] =
-	{
-		VertexFormat::Element(VertexFormat::POSITION, 3),
-		VertexFormat::Element(VertexFormat::NORMAL, 3),
-		VertexFormat::Element(VertexFormat::TEXCOORD0, 2)
-	};
-	Mesh* mesh = Mesh::createMesh(VertexFormat(elements, 3), vertexCount, false);
-	if (mesh == NULL)
-	{
-		GP_ERROR("Failed to create mesh.");
-		return NULL;
-	}
-	mesh->setVertexData(vertices, 0, vertexCount);
-	MeshPart* meshPart = mesh->addPart(Mesh::TRIANGLES, Mesh::INDEX16, indexCount, false);
-	meshPart->setIndexData(indices, 0, indexCount);
-	return mesh;
-}
-
-/*
-	gå från bara diffuse till bara normal och tvärtom fukar, sampelrs lever kvar?
-	gå från bara diffuse till bara normal och tvärtom fukar, sampelrs lever kvar?
-	gå från bara diffuse till bara normal och tvärtom fukar, sampelrs lever kvar?
-*/
 
 void MayaViewer::attachMaterial(const char* nodeName, const char* materialName)
 {
