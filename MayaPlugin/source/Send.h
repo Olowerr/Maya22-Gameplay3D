@@ -356,7 +356,6 @@ inline bool sendUpdateMesh(const MObject& node, Comlib* pComlib)
 
 	offset += sizeof(Vertex) * meshHeader.numVertex;
 	index.get((int*)(pMessage + offset));
-	std::cout << meshHeader.numVertex << " | " << meshHeader.numIndex << "\n";
 
 	SectionHeader secHeader;
 	secHeader.header = MESH_UPDATE;
