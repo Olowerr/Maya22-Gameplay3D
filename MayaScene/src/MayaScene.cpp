@@ -468,9 +468,6 @@ void MayaViewer::attachMaterial(const char* nodeName, const char* materialName)
 		return;
 
 
-	Material* pMaterial = pModel->getMaterial();
-
-
 	// Materials with no diffuse but normal map, will be seen as colored, and wont try applying the normal map
 	if (mat->second.colored)
 	{
