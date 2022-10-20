@@ -91,12 +91,11 @@ void meshAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug
 		if (M_FAIL2)
 			return;
 
-		std::string nodeName = mesh.name().asChar();
 		std::string plugName = plug.name().asChar();
 
 		if (plugName.find(".pnts[") != -1)
 		{
-			sendUpdateMesh(plug.logicalIndex(), plug.node(), producerBuffer);
+			sendUpdateMesh(plug.node(), producerBuffer);
 		}
 
 	}

@@ -112,11 +112,11 @@ void MayaViewer::update(float elapsedTime)
 		}
 		case MESH_UPDATE:
 		{
-			MeshUpdateHeader header;
-			memcpy(&header, msg, sizeof(MeshUpdateHeader));
+			MeshInfoHeader meshInfo;
+			memcpy(&meshInfo, msg, sizeof(MeshInfoHeader));
 
 			if (_scene->findNode(mainHeader->name))
-				updateMesh(header, mainHeader->name);
+				updateMesh(msg + sizeof(MeshInfoHeader), meshInfo, mainHeader->name);
 			else
 				OutputDebugString(L"MESH_UPDATE | Could not find node...\n");
 
@@ -416,7 +416,7 @@ void MayaViewer::recreateMesh(const MeshInfoHeader& header, void* pMeshData, con
 	SAFE_RELEASE(pModel);
 }
 
-void MayaViewer::updateMesh(const MeshUpdateHeader& header, const char* nodeName)
+void MayaViewer::updateMesh(char* meshData, const MeshInfoHeader& meshInfo, const char* nodeName)
 {
 	Node* pNode = _scene->findNode(nodeName);
 	if (!pNode)
@@ -438,10 +438,19 @@ void MayaViewer::updateMesh(const MeshUpdateHeader& header, const char* nodeName
 		OutputDebugString(L"updateMesh | Couldn't get mesh...\n");
 		return;
 	}
+	
 
-	Vertex* pData = (Vertex*)pMesh->mapVertexBuffer();
-	pData[header.vertexIndex] = header.newVertex;
+	const size_t vertexBytes = meshInfo.numVertex * sizeof(Vertex);
+
+	//pMesh->setVertexData()
+
+	void* pOldVertexData = pMesh->mapVertexBuffer();
+	memcpy(pOldVertexData, meshData, vertexBytes);
 	pMesh->unmapVertexBuffer();
+	
+	void* pOldIndexData = pMesh->getPart(0)->mapIndexBuffer();
+	memcpy(pOldIndexData, meshData + vertexBytes, meshInfo.numIndex * sizeof(int));
+	pMesh->getPart(0)->unmapIndexBuffer();
 }
 
 void MayaViewer::setTransform(const float* matrix, const char* nodeName)
@@ -774,6 +783,12 @@ Mesh* MayaViewer::createMesh(const MeshInfoHeader& info, void* data)
 	}
 
 	mesh->setVertexData(data, 0, info.numVertex);
+
+	auto qwe = std::to_wstring(info.numVertex) + L"\n";
+	auto asd = std::to_wstring(info.numIndex) + L"\n";
+
+	OutputDebugString(qwe.c_str());
+	OutputDebugString(asd.c_str());
 
 	MeshPart* meshPart = mesh->addPart(Mesh::TRIANGLES, Mesh::IndexFormat::INDEX32, info.numIndex, true);
 	meshPart->setIndexData((char*)data + sizeof(Vertex) * info.numVertex, 0, info.numIndex);

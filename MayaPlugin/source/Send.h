@@ -276,76 +276,98 @@ inline bool sendMesh(const MObject& node, Comlib* pComlib)
 	return true;
 }
 
-inline bool sendUpdateMesh(unsigned int index, const MObject& node, Comlib* pComlib)
+inline bool sendUpdateMesh(const MObject& node, Comlib* pComlib)
 {
-	MStatus status;
-
-	// temp
-	return sendMesh(node, pComlib);
-
-	MFnMesh mesh(node, &status);
-	return false;
-
-	const char* nodeName = mesh.name(&status).asChar();
-	if (M_FAIL(status))
-		return false;
-
-	// first ---
-	MPoint position;
-	status = mesh.getPoint(index, position);
-	if (M_FAIL(status))
-		return false;
-	
-	MVector normal;
-	status = mesh.getVertexNormal(index, false, normal);
-	if (M_FAIL(status))
-		return false;
-	// --- first
-
-
-
-	// second ---
 	/*
-		find and save i (in indien) when searching through vertexIds for index
-		go through indien and match elements to indicies
-
-		matching values should indicate that vertex[i] needs to be updated in gameplay3d
-		right?
+		This function differs from sendMesh.
+		Mostly by only sending MeshInfoHeader and vertices no indices.
 	*/
 
-	MIntArray indien;
-	MIntArray xTrianglesPerFace, indicies, xVertexPerFace, vertexIds;
-	mesh.getTriangleOffsets(xTrianglesPerFace, indicies);
-	mesh.getVertices(xVertexPerFace, vertexIds);
-	
-	for (unsigned int i = 0; i < vertexIds.length(); i++)
+	MStatus status;
+	MFnMesh mesh(node, &status);
+	if (M_FAIL(status))
+		return false;
+
+	MFnTransform tra(mesh.parent(0), &status);
+	if (M_FAIL2())
+		return false;
+
+	// Gameplay3D uses transform name
+	const char* nodeName = tra.name(&status).asChar();
+	if (M_FAIL(status))
+		return false;
+
+	MItMeshFaceVertex vertexIterator(node, &status);
+	if (M_FAIL(status))
+		return false;
+
+	MIntArray xTrianglesPerFace, index;
+	MFloatVectorArray tangents, biNormals;
+
+	MStatus triStatus = mesh.getTriangleOffsets(xTrianglesPerFace, index);
+	MStatus tangStatus = mesh.getTangents(tangents);
+	MStatus biNormStatus = mesh.getBinormals(biNormals);
+
+	if (M_FAIL(triStatus) || M_FAIL(tangStatus) || M_FAIL(biNormStatus))
+		return false;
+
+	MeshInfoHeader meshHeader{ 0, index.length() };
+	for (; !vertexIterator.isDone(); vertexIterator.next())
+		meshHeader.numVertex++;
+
+	const size_t SIZE = sizeof(MeshInfoHeader) + sizeof(Vertex) * meshHeader.numVertex + sizeof(int) * meshHeader.numIndex;
+	char* pMessage = (char*)malloc(SIZE);
+	if (!pMessage)
+		return false;
+
+	size_t offset = 0, numBytes = SIZE - (sizeof(Vertex) * meshHeader.numVertex + sizeof(int) * meshHeader.numIndex);
+	memcpy(pMessage, &meshHeader, numBytes);
+	offset += sizeof(MeshInfoHeader);
+
+	MPoint position;
+	float2 uv;
+	MVector normal;
+	Vertex* pVertex = (Vertex*)(pMessage + offset);
+
+	vertexIterator.reset();
+	for (int i = 0; !vertexIterator.isDone(); vertexIterator.next(), i++)
 	{
-		if (vertexIds[i] == index)
-			indien.append(i);
+		position = vertexIterator.position();
+		vertexIterator.getUV(uv);
+		vertexIterator.getNormal(normal);
+
+		pVertex[i].position[0] = (float)position.x;
+		pVertex[i].position[1] = (float)position.y;
+		pVertex[i].position[2] = (float)position.z;
+
+		pVertex[i].uv[0] = uv[0];
+		pVertex[i].uv[1] = uv[1];
+
+		pVertex[i].normal[0] = (float)normal.x;
+		pVertex[i].normal[1] = (float)normal.y;
+		pVertex[i].normal[2] = (float)normal.z;
+
+		pVertex[i].tangent[0] = tangents[i].x;
+		pVertex[i].tangent[1] = tangents[i].y;
+		pVertex[i].tangent[2] = tangents[i].z;
+
+		pVertex[i].biNormal[0] = biNormals[i].x;
+		pVertex[i].biNormal[1] = biNormals[i].y;
+		pVertex[i].biNormal[2] = biNormals[i].z;
 	}
-	// --- second
 
-	MeshUpdateHeader header;
-	header.vertexIndex = index;
-	
-	header.newVertex.position[0] = position.x;
-	header.newVertex.position[1] = position.y;
-	header.newVertex.position[2] = position.z;
+	offset += sizeof(Vertex) * meshHeader.numVertex;
+	index.get((int*)(pMessage + offset));
+	std::cout << meshHeader.numVertex << " | " << meshHeader.numIndex << "\n";
 
-	header.newVertex.uv[0] = 0.f; // temp
-	header.newVertex.uv[1] = 0.f; // temp
-
-	header.newVertex.normal[0] = normal.x;
-	header.newVertex.normal[1] = normal.y;
-	header.newVertex.normal[2] = normal.z;
-	
 	SectionHeader secHeader;
 	secHeader.header = MESH_UPDATE;
-	secHeader.name= nodeName;
-	secHeader.messageLength = sizeof(MeshUpdateHeader);
-	secHeader.messageID = 0;
+	secHeader.name = nodeName;
+	secHeader.messageLength = SIZE;
 
-	pComlib->Send((char*)&header, &secHeader);
+	pComlib->Send(pMessage, &secHeader);
+
+	free(pMessage);
 
 	return true;
 }
