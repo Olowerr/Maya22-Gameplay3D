@@ -4,6 +4,21 @@
 
 inline bool sendMesh(const MObject& node, Comlib* pComlib)
 {
+	
+	/*
+		To avoid unnecessary allocations,
+		such as dynamially allocating a Vertex- and int- array,
+		and then copying the data from the arrays to pMessage (the memory which Comlib will send).
+		We simply first allocate the total bytes needed,
+		and then cast & offset the pointer to whichever type we're using.
+		This way we can directly write to the memory that the Comlib will copy and send.
+
+		The memory allocated is being used according to the following structure:
+		MeshInfoHeader
+		Vertex (all vertices)
+		int (all indices)
+	*/
+
 	MStatus status;
 
 	MFnMesh mesh(node, &status);
@@ -19,88 +34,6 @@ inline bool sendMesh(const MObject& node, Comlib* pComlib)
 	if (M_FAIL(status))
 		return false;
 
-#define SWITCH 1
-
-#if SWITCH == 0
-	MItMeshFaceVertex it2(node, &status);
-	if (M_FAIL2)
-		return false;
-
-	MIntArray xTrianglesPerFace, index;
-	MStatus a = mesh.getTriangleOffsets(xTrianglesPerFace, index);
-
-	printIntArray(xTrianglesPerFace);
-
-	MFloatVectorArray tangents, biNormals;
-	mesh.getTangents(tangents);
-	mesh.getBinormals(biNormals);
-
-	std::vector<Vertex> verts;
-	verts.reserve(index.length());
-
-	MPoint position;
-	float2 uv;
-	MVector normal;
-
-	for (int i = 0; !it2.isDone(); it2.next(), i++)
-	{
-		position = it2.position();
-		it2.getUV(uv);
-		it2.getNormal(normal);
-
-		verts.emplace_back();
-		verts[i].position[0] = position.x;
-		verts[i].position[1] = position.y;
-		verts[i].position[2] = position.z;
-
-		verts[i].uv[0]		 = uv[0];
-		verts[i].uv[1]		 = uv[1];
-
-		verts[i].normal[0]   = normal.x;
-		verts[i].normal[1]   = normal.y;
-		verts[i].normal[2]   = normal.z;
-
-		verts[i].tangent[0]	 = tangents[i].x;
-		verts[i].tangent[1]	 = tangents[i].y;
-		verts[i].tangent[2]	 = tangents[i].z;
-
-		verts[i].biNormal[0] = biNormals[i].x;
-		verts[i].biNormal[1] = biNormals[i].y;
-		verts[i].biNormal[2] = biNormals[i].z;
-	}
-	
-	MeshInfoHeader meshInfo{ (unsigned int)verts.size(), index.length() };
-
-	const size_t SIZE = sizeof(MeshInfoHeader) + sizeof(Vertex) * verts.size() + sizeof(int) * index.length();
-	char* pData = (char*)malloc(SIZE);
-
-	if (!pData)
-		return false;
-
-	size_t offset = 0;
-
-	memcpy(pData, &meshInfo, sizeof(MeshInfoHeader));
-	offset += sizeof(MeshInfoHeader);
-
-	memcpy(pData + offset, verts.data(), sizeof(Vertex) * verts.size());
-	offset += sizeof(Vertex) * verts.size();
-
-	index.get((int*)(pData + offset));
-
-	SectionHeader secHeader;
-	secHeader.header = MESH_NEW;
-	secHeader.name = nodeName;
-	secHeader.messageLength = SIZE;
-
-	pComlib->Send(pData, &secHeader);
-
-	free(pData);
-
-	return true;
-	
-
-#elif SWITCH == 1
-
 	MItMeshFaceVertex vertexIterator(node, &status);
 	if (M_FAIL(status))
 		return false;
@@ -108,7 +41,6 @@ inline bool sendMesh(const MObject& node, Comlib* pComlib)
 
 	MIntArray xTrianglesPerFace, index;
 	MFloatVectorArray tangents, biNormals;
-	
 	MStatus triStatus = mesh.getTriangleOffsets(xTrianglesPerFace, index);
 	MStatus tangStatus = mesh.getTangents(tangents);
 	MStatus biNormStatus = mesh.getBinormals(biNormals);
@@ -116,19 +48,6 @@ inline bool sendMesh(const MObject& node, Comlib* pComlib)
 	if (M_FAIL(triStatus) || M_FAIL(tangStatus) || M_FAIL(biNormStatus))
 		return false;
 
-	/*
-		To avoid unnecessary allocations,
-		such as dynamially allocating a Vertex- and int- array,
-		and then copying the data from the arrays to pMessage (the memory which Comlib will send).
-		We simply first allocate the total bytes needed,
-		and then cast & offset the pointer to whichever type we're using.
-		This way we can directly write to the memory that the Comlib will copy and send.
-
-		The memory allocated is being used according to the following structure:
-		MeshInfoHeader
-		Vertex (all vertices)
-		int (all indices)
-	*/
 
 
 	MeshInfoHeader meshHeader{ 0, index.length() };
@@ -188,88 +107,6 @@ inline bool sendMesh(const MObject& node, Comlib* pComlib)
 	pComlib->Send(pMessage, &secHeader);
 
 	free(pMessage);
-
-	return true;
-
-
-#else
-
-
-	// Indices
-	MIntArray xTrianglesPerFace, indicies;
-	MStatus a = mesh.getTriangleOffsets(xTrianglesPerFace, indicies);
-
-	// Points
-	MFloatPointArray points;
-	MIntArray xVertexPerFace, vertexIds;
-	MStatus b = mesh.getPoints(points);
-	MStatus c = mesh.getVertices(xVertexPerFace, vertexIds);
-
-	// Normals
-	MFloatVectorArray normals;
-	MIntArray xNormalsPerFace, normalIds;
-	MStatus d = mesh.getNormals(normals);
-	MStatus e = mesh.getNormalIds(xNormalsPerFace, normalIds);
-
-	// UVs
-	MFloatArray uArray, vArray;
-	MIntArray xUVPerFace, uvIDs;
-	MStatus f = mesh.getUVs(uArray, vArray);
-	MStatus g = mesh.getAssignedUVs(xUVPerFace, uvIDs);
-
-	/*
-		mesh.getTangents()
-		mesh.getBinormals()
-	*/
-
-	if (M_FAIL(a) || M_FAIL(b) || M_FAIL(c) || M_FAIL(d) || M_FAIL(e) || M_FAIL(f) || M_FAIL(g))
-		return false;
-
-	// Write to data directly? :thonk:
-	std::vector<Vertex> vertices(indicies.length());
-	for (unsigned int i = 0; i < indicies.length(); i++)
-	{
-		MFloatPoint& currPoint = points[vertexIds[indicies[i]]];
-		MFloatVector& currNormal = normals[normalIds[indicies[i]]];
-		float& uCoord = uArray[uvIDs[indicies[i]]];
-		float& vCoord = vArray[uvIDs[indicies[i]]];
-
-		// memcpy faster? :thonk:
-		vertices[i].position[0] = currPoint.x;
-		vertices[i].position[1] = currPoint.y;
-		vertices[i].position[2] = currPoint.z;
-
-		vertices[i].uv[0] = uCoord;
-		vertices[i].uv[1] = vCoord;
-
-		vertices[i].normal[0] = currNormal.x;
-		vertices[i].normal[1] = currNormal.y;
-		vertices[i].normal[2] = currNormal.z;
-	}
-	
-
-	MeshInfoHeader meshInfo;
-	meshInfo.numVertex = indicies.length();
-
-	const size_t SIZE = sizeof(MeshInfoHeader) + sizeof(Vertex) * vertices.size();
-	void* pData = malloc(SIZE);
-
-	// Ignore warnings :]
-	memcpy(pData, &meshInfo, sizeof(MeshInfoHeader));
-	memcpy((char*)pData + sizeof(MeshInfoHeader), vertices.data(), SIZE - sizeof(MeshInfoHeader));
-
-	SectionHeader secHeader;
-	secHeader.header = MESH_NEW;
-	secHeader.name = nodeName;
-	secHeader.messageLength = SIZE;
-	secHeader.messageID = 0;
-
-	// Check if failed?
-	pComlib->Send((char*)pData, &secHeader);
-
-	free(pData);
-
-#endif
 
 	return true;
 }
