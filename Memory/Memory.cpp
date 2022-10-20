@@ -21,14 +21,14 @@ Memory::~Memory()
 
 void Memory::InitializeFilemap(LPCWSTR buffername)
 {
-	memoryFilemap = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, bufferSize, buffername);
+	memoryFilemap = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, (DWORD)bufferSize, buffername);
 	if (!memoryFilemap)
 		printf("Failed to create file mapping object\n");
 	if (GetLastError() == ERROR_ALREADY_EXISTS)
 		printf("File mapping object already exists - it's shared\n");
 
 
-	controlFilemap = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, controlbufferSize, ctrlbufferName);
+	controlFilemap = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, (DWORD)controlbufferSize, ctrlbufferName);
 	if (!controlFilemap)
 		printf("Failed to create file mapping object\n");
 	if (GetLastError() == ERROR_ALREADY_EXISTS)

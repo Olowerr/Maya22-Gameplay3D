@@ -30,7 +30,7 @@
     <ClInclude Include="..\Memory\Mutex.h">
       <Filter>Source Files\Memory</Filter>
     </ClInclude>
-    <ClInclude Include="..\Memory\the stuff.h">
+    <ClInclude Include="..\Memory\CharString.h">
       <Filter>Source Files\Memory</Filter>
     </ClInclude>
     <ClInclude Include="source\Send.h">

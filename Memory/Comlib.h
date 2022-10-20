@@ -17,7 +17,6 @@ private:
 	size_t* tail;
 	size_t* freeMemory;
 
-	ControlHeader* ctrler;
 	ProcessType type;
 
 public:

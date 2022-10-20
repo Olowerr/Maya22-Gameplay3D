@@ -11,17 +11,6 @@ Comlib* producerBuffer;
 std::unordered_map<std::string, MCallbackId> callbacks;
 MStatus status = MS::kSuccess;
 
-#define PRINT_EXTRA 0
-#define PRINT_SENDS 1
-
-/*
-	IF FILE-NODE EXISTS BEFORE HAND BUT NOT CONNECTED TO ANYTHING IT'LL NOT SET ANY CALLBACKS
-	IF FILE-NODE EXISTS BEFORE HAND BUT NOT CONNECTED TO ANYTHING IT'LL NOT SET ANY CALLBACKS
-	IF FILE-NODE EXISTS BEFORE HAND BUT NOT CONNECTED TO ANYTHING IT'LL NOT SET ANY CALLBACKS
-	IF FILE-NODE EXISTS BEFORE HAND BUT NOT CONNECTED TO ANYTHING IT'LL NOT SET ANY CALLBACKS
-	IF FILE-NODE EXISTS BEFORE HAND BUT NOT CONNECTED TO ANYTHING IT'LL NOT SET ANY CALLBACKS
-*/
-
 void addCallback(const std::string& name, MCallbackId id)
 {
 	static int i = 0;
@@ -48,40 +37,6 @@ void removeCallback(const std::string& name)
 	callbacks.erase(name);
 }
 
-/*
-
-
-	Extrude initially works, but dragging while in extrude doesn't register.
-	It sends attributeChanged with msg kAttributeSet.
-	Currently meshAttribteChanged only checks kAttributeSet
-	and meshTopoAttributeChanged only checks kAttributeEval,
-	but removes the callback when outMesh is found
-
-	kAttributeEval in meshAttributeChanged is triggered too much with a .outMesh check,
-	atleast when a node is created (triggers twice).
-	Otherwise it seems fine (?) but Patrik said to use only kAttributeSet in meshAttributeChanged .-.
-
-	not removing the meshTopoAttributeChanged callback creates duplicates.
-
-	maybe meshAttribteChanged-Eval can check if extrude is active ?
-
-	------
-
-	Dragging a vertex currently sends the whole mesh.. Need to send only the affected vertices
-
-	------
-
-	Recheck camera height
-
-	------
-
-	USE MItMeshFaceVertex FOR VERTEX BUFFER
-	USE mesh.getTriangleOffsets FOR INDEX BUFFER
-	WHEN DRAGGING VERT FIND AFFECTED VERTS BY LOOP THRO MIT AND SEARCH FOR vertId() == INDEX
-	SAVE I WHEN FOUND AND UPDATE VERTEX BUFFER WITH SAVED INDICIES
-	// COULD MAYBE JUST SEND THE NEW VERTEX DATA WHEN vertId() == PLUG INDEX RIGHT ?
-
-*/
 
 void meshAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* clientData)
 {
@@ -226,65 +181,6 @@ void fileTextureAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug
 	}
 }
 
-void setFileCallbacks(MObject& materialNode)
-{
-	if (materialNode.hasFn(MFn::kLambert))
-	{
-		MFnLambertShader tempLamb(materialNode, &status);
-		if (M_FAIL2)
-			return;
-
-		const char* matName = tempLamb.name().asChar();
-
-		MPlugArray lambertCon;
-		MPlug lambertPlug = tempLamb.findPlug("color", false);
-		lambertPlug.connectedTo(lambertCon, true, false);
-		bool hasTexture = false;
-
-		if (lambertCon.length() > 0)
-		{
-			MObject obj(lambertCon[0].node());
-			if (obj.hasFn(MFn::kFileTexture))
-			{
-				MCallbackId id = MNodeMessage::addAttributeChangedCallback(obj, fileTextureAttributeChanged, nullptr, &status);
-				if (M_OK2)
-				{
-					std::string textureNodeName = MFnDependencyNode(obj).name().asChar();
-					addCallbackDelOld(textureNodeName + "FileTextureChanged", id);
-				}
-			}
-		}
-
-		MPlug normPlug = tempLamb.findPlug("normalCamera", false);
-		normPlug.connectedTo(lambertCon, true, false);
-
-		if (lambertCon.length() > 0)
-		{
-			if (lambertCon[0].node().hasFn(MFn::kBump))
-			{
-				MFnDependencyNode bump(lambertCon[0].node());
-
-				MPlug bumpPlug = bump.findPlug("bumpValue", false);
-				bumpPlug.connectedTo(lambertCon, true, false);
-
-				if (lambertCon.length() > 0)
-				{
-					MObject obj(lambertCon[0].node());
-					if (obj.hasFn(MFn::kFileTexture))
-					{
-						MCallbackId id = MNodeMessage::addAttributeChangedCallback(obj, fileTextureAttributeChanged, nullptr, &status);
-						if (M_OK2)
-						{
-							std::string textureNodeName = MFnDependencyNode(obj).name().asChar();
-							addCallbackDelOld(textureNodeName + "FileTextureChanged", id);
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
 void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& otherPlug, void* x)
 {
 	if (msg & MNodeMessage::kConnectionMade || msg & MNodeMessage::kConnectionBroken)
@@ -301,30 +197,6 @@ void materialAttributeChanged(MNodeMessage::AttributeMessage msg, MPlug& plug, M
 		if (otherNode.hasFn(MFn::kBump))
 		{
 			SendMaterialData(material, producerBuffer);
-
-			/*MFnDependencyNode bumpNode(otherNode, &status);
-			if (M_OK2)
-			{
-				MPlugArray plugArr;
-				MPlug bumpPlug = bumpNode.findPlug("bumpValue", false);
-				bumpPlug.connectedTo(plugArr, true, false);
-
-				for (unsigned int i = 0; i < plugArr.length(); i++)
-				{
-					MObject obj(plugArr[i].node());
-					if (obj.hasFn(MFn::kFileTexture))
-					{
-						MCallbackId id = MNodeMessage::addAttributeChangedCallback(obj, fileTextureAttributeChanged, nullptr, &status);
-						if (M_OK2)
-						{
-							std::string textureNodeName = MFnDependencyNode(obj).name().asChar();
-							addCallbackDelOld(textureNodeName + "FileTextureChanged", id);
-						}
-						break;
-
-					}
-				}
-			}*/
 		}
 
 
@@ -439,7 +311,7 @@ void iterateScene()
 
 			MObject node = fileIterator.thisNode();
 
-			MCallbackId id = MNodeMessage::addAttributeChangedCallback(node, fileTextureAttributeChanged, nullptr, &status);
+			id = MNodeMessage::addAttributeChangedCallback(node, fileTextureAttributeChanged, nullptr, &status);
 			if (M_OK2)
 			{
 				std::string textureNodeName = dgNode.name().asChar();
@@ -461,8 +333,6 @@ void iterateScene()
 			id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
 			if (M_OK2)
 				addCallback(name + "MaterialChanged", id);
-
-			//setFileCallbacks(node);
 
 			SendMaterialData(dgNode, producerBuffer);
 		}
@@ -545,12 +415,10 @@ void nodeRemoved(MObject& node, void* clientData)
 
 		producerBuffer->Send(nullptr, &secHeader);
 	}
-
 }
 
 void nodeAdded(MObject& node, void* clientData)
 {
-	// Switch to MFnDagNode ? hmmmm	
 	MFnDagNode dagNode(node, &status);
 	if (M_OK2)
 	{
@@ -597,12 +465,9 @@ void nodeAdded(MObject& node, void* clientData)
 
 		if (node.hasFn(MFn::kLambert))
 		{
-			//setFileCallbacks(node);
 			id = MNodeMessage::addAttributeChangedCallback(node, materialAttributeChanged, NULL, &status);
 			if (M_OK2)
 				addCallback(name + "MaterialChanged", id);
-
-			//SendMaterialData(material, producerBuffer);
 		}
 
 		if (node.hasFn(MFn::kFileTexture))
@@ -610,13 +475,9 @@ void nodeAdded(MObject& node, void* clientData)
 			id = MNodeMessage::addAttributeChangedCallback(node, fileTextureAttributeChanged, nullptr, &status);
 			if (M_OK2)
 				addCallbackDelOld(name + "FileTextureChanged", id);
-			
 		}
-
 	}
-
 }
-
 
 EXPORT MStatus initializePlugin(MObject obj) {
 

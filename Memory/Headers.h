@@ -1,5 +1,5 @@
 #pragma once
-#include "the stuff.h"
+#include "CharString.h"
 
 constexpr size_t MB = 1048576;
 
@@ -29,24 +29,18 @@ struct Vertex
 
 struct SectionHeader
 {
-	Headers header;
-	size_t messageLength;
-	size_t messageID;
+	Headers header = Headers::INVALID;
+	size_t messageLength = 0;
+	size_t messageID = 0;
 
-	// Will always be used right?
-	CharString name;
+	// Name of node or material we're affecting
+	CharString name{};
 };
 
 struct MeshInfoHeader
 {
 	unsigned int numVertex;
 	unsigned int numIndex;
-};
-
-struct MeshUpdateHeader
-{
-	unsigned int vertexIndex;
-	Vertex newVertex;
 };
 
 struct TransformDataHeader

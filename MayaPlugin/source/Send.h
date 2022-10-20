@@ -1,8 +1,6 @@
 #pragma once
 
-//#include <maya/MFnMesh.h>
 #include "Comlib.h"
-
 
 inline bool sendMesh(const MObject& node, Comlib* pComlib)
 {
@@ -289,7 +287,7 @@ inline bool sendUpdateMesh(const MObject& node, Comlib* pComlib)
 		return false;
 
 	MFnTransform tra(mesh.parent(0), &status);
-	if (M_FAIL2())
+	if (M_FAIL(status))
 		return false;
 
 	// Gameplay3D uses transform name
@@ -408,7 +406,7 @@ inline bool SendTransformData(const MObject& obj, Comlib* pComlib)
 		pComlib->Send(msg, &secHeader);
 
 		delete[]msg;
-		for (size_t i = 0; i < dag.childCount(); i++)
+		for (unsigned int i = 0; i < dag.childCount(); i++)
 		{
 			if (!dag.child(i).isNull())
 			{
@@ -442,7 +440,7 @@ inline bool sendCamera(M3dView view, Comlib* pComlib)
 	CameraHeader cameraData{};
 
 	transform.transformationMatrix().get(cameraData.viewMatrix);
-	cameraData.fieldOfView = camera.horizontalFieldOfView() * (180.f / M_PI);
+	cameraData.fieldOfView = (float)camera.horizontalFieldOfView() * (180.f / (float)M_PI);
 	cameraData.perspective = !camera.isOrtho();
 
 	if (cameraData.perspective)
