@@ -1,11 +1,54 @@
+UD1447
+Oliver Klingspor & Adam Åkesson
+
+Make sure to read through the whole file before continuing :)
+
+Requirements:
+Maya22
+Python 3.10 (installed from Microsoft Store)
+
+
+Note:
+Before building a project, make sure the latest Platform Toolset are set:
+(right click the project -> Properties -> Configuration Properties -> General -> Platform Toolset)
+
+
 What you have to do to run the program:
 
-1. Go into loadPlugin.py and change the "s.send" line to your path ending with "/Maya22-Gameplay3D/MayaPlugin/build/x64/Debug/UD1447Project.mll".
-There is a premade commented "#s.send" for the examinator to put in their own path.
+1. Navigate to and open gameplay.sln (MayaScene/GamePlay-master/)
 
-2. Build the "MayaAPI" to run the plugin.
+2. Build the gameplay project. Once it's finished, close visual studio
 
-3. Run the program with "MayaScene" as the startup project.
+3. Start Maya22 and run the mel command:
+commandPort -n ":1234"
 
-4. If you want to build the plugin "MayaAPI" while "MayaScene" is already running you have to go into maya -> Windows - > Settings/Preferences -> Plug in Manager
-And search for the UD1447Project.mll file. Remember that you will need to build the "MayaAPI" first to get the file to start with.
+4. Open Maya22Gamplay3D.sln
+
+5. Go into loadPlugin.py (inside MayaAPI - Resource Files)
+and change the path on the "s.send" line to your path inside the directory, ending with:
+"/MayaPlugin/build/x64/Debug/UD1447Project.mll".
+Make sure the slashes are forward-slashes and no spaces exist.
+There exist multiple example paths in loadPlugin.py for clarity.
+
+6. Build the "MayaAPI" to run the plugin and press "Allow" in the Maya popup window.
+
+7. Set MayaScene as the startup project and start it
+(right click the project -> Set as Startup Project) 
+
+8. Enjoy :)
+
+
+EXTRA NOTES:
+If you want to start the plugin "MayaAPI" while "MayaScene" is already running you have to go into:
+maya -> Windows - > Settings/Preferences -> Plug in Manager
+And search for the UD1447Project.mll file located inside:
+"MayaPlugin/build/x64/Debug/"
+Remember that you will need to build the "MayaAPI" first to get the file to start with.
+
+It's possible to start the plugin manually (without Python)
+but the Build Events in MayaAPI has to be cleared
+and you'll need to first build MayaAPI then go into:
+maya -> Windows - > Settings/Preferences -> Plug in Manager
+And search for the UD1447Project.mll file located inside:
+"/MayaPlugin/build/x64/Debug/"
+
