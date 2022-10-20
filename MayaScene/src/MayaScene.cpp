@@ -615,13 +615,6 @@ Mesh* MayaViewer::createMesh(const MeshInfoHeader& info, void* data)
 	}
 
 	mesh->setVertexData(data, 0, info.numVertex);
-
-	auto qwe = std::to_wstring(info.numVertex) + L"\n";
-	auto asd = std::to_wstring(info.numIndex) + L"\n";
-
-	OutputDebugString(qwe.c_str());
-	OutputDebugString(asd.c_str());
-
 	MeshPart* meshPart = mesh->addPart(Mesh::TRIANGLES, Mesh::IndexFormat::INDEX32, info.numIndex, true);
 	meshPart->setIndexData((char*)data + sizeof(Vertex) * info.numVertex, 0, info.numIndex);
 	return mesh;

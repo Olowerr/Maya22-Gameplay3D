@@ -80,7 +80,7 @@ private:
     // nodeName - Material
     std::unordered_map<std::string, std::string> nodes;
 
-    // Material - isColored (shader type)
+    // MaterialName - Material Data (shader type)
     std::unordered_map<std::string, Mat> materials;
 
 
