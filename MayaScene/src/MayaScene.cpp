@@ -16,7 +16,20 @@ MayaViewer::MayaViewer()
 
 MayaViewer::~MayaViewer()
 {
-	
+	delete consumerBuffer;
+	SAFE_RELEASE(light);
+
+	std::vector<Node*> nodes;
+	_scene->findNodes("", nodes, true, false);
+
+	for (Node* node : nodes)
+	{
+		node->setDrawable(nullptr);
+		node->setCamera(nullptr);
+		node->setLight(nullptr);
+	}
+
+	_scene->removeAllNodes();
 }
 
 void MayaViewer::initialize()
@@ -44,23 +57,7 @@ void MayaViewer::initialize()
 
 void MayaViewer::finalize()
 {
-	delete consumerBuffer;
-
-	SAFE_RELEASE(light);
-
-	std::vector<Node*> nodes;
-	_scene->findNodes("", nodes, true, false);
-
-	for (Node* node : nodes)
-	{
-		node->setDrawable(nullptr);
-		node->setCamera(nullptr);
-		node->setLight(nullptr);
-		
-		SAFE_RELEASE(node);
-	}
-
-	SAFE_RELEASE(_scene);
+	SAFE_RELEASE(_scene);	
 }
 
 void MayaViewer::update(float elapsedTime)
