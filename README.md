@@ -1,5 +1,6 @@
 This project was an assignment in a course at Blekinge Institute of Technology.
-Creatos: 
+
+Creators: 
 * Oliver Klingspor ([Olowerr](https://github.com/Olowerr))
 * Adam Åkesson ([Simadra](https://github.com/Simadra))
 
