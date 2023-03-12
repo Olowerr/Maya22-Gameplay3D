@@ -7,10 +7,14 @@ The visual studio solution consists of two projects. A Maya22 plugin and a Gamep
 By following the instructions below, one can model inside Maya while viewing the scene directly in Gameplay3D.
 Allowing the user to see the model directly with the game engine's shading.
 
-![](Pics/maya.PNG | width=200)
-![](Pics/maya1.PNG | width=200)
-![](Pics/maya2.PNG | width=200)
-![](Pics/maya3.PNG | width=200)
+<p float="left">
+  <img src="Pics/maya.PNG" width="500" />
+  <img src="Pics/maya1.PNG" width="500" /> 
+</p>
+<p float="left">
+  <img src="Pics/maya2.PNG" width="500" />
+  <img src="Pics/maya3.PNG" width="500" /> 
+</p>
 
 # Instructions
 
