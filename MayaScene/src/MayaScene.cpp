@@ -388,10 +388,10 @@ void MayaViewer::setCamera(const CameraHeader& camHeader, const char* nodeName)
 	else
 	{
 		pCamera = pNode->getCamera();
-		pCamera->setAspectRatio(AspectRatio);
+		pCamera->setAspectRatio(getAspectRatio());
 
 		if (camHeader.perspective)
-			pCamera->setFieldOfView(camHeader.fieldOfView);
+			pCamera->setFieldOfView(45.f);
 		else
 		{
 			pCamera->setZoomX(camHeader.width);
