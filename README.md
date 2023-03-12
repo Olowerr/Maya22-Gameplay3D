@@ -1,3 +1,11 @@
+# Maya22 Gameplay3D
+Maya22-Gameplay3D enables the user to model in Maya while viewing the model inside Gameplay3D in real time. 
+Allowing an artist to view their model with the game engines shading while working on it.
+This was done through a shared memory architecture. A C++ Maya plugin catches events from Maya and dispatches messages containing any relevant data
+to the shared memory. The Gameplay3D scene can then interpret these messages and update the model or scene accordingly.
+
+This project was an assignment in a course at Blekinge Institute of Technology.
+
 <p float="left">
   <img src="Pics/maya.PNG" width="500" />
   <img src="Pics/maya1.PNG" width="500" /> 
@@ -7,15 +15,7 @@
   <img src="Pics/maya3.PNG" width="500" /> 
 </p>
 
-# Maya22 Gameplay3D
-Maya22-Gameplay3D enables the user to model in Maya while viewing the model inside Gameplay3D in real time. 
-Allowing an artist to view their model with the game engines shading while working on it.
-This was done through a shared memory architecture. A C++ Maya plugin catches events from Maya and dispatches messages containing any relevant data
-to the shared memory. The Gameplay3D scene can then interpret these messages and update the model or scene accordingly.
-
-This project was an assignment in a course at Blekinge Institute of Technology.
-
-Creators: 
+# Creators
 * Oliver Klingspor ([Olowerr](https://github.com/Olowerr))
 * Adam Åkesson ([Simadra](https://github.com/Simadra))
 
