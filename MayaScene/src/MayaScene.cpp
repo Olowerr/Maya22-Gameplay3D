@@ -11,11 +11,25 @@ bool gMousePressed;
 MayaViewer::MayaViewer()
 	: _scene(NULL), _wireframe(false)
 {
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 }
 
 MayaViewer::~MayaViewer()
 {
 	delete consumerBuffer;
+	SAFE_RELEASE(light);
+
+	std::vector<Node*> nodes;
+	_scene->findNodes("", nodes, true, false);
+
+	for (Node* node : nodes)
+	{
+		node->setDrawable(nullptr);
+		node->setCamera(nullptr);
+		node->setLight(nullptr);
+	}
+
+	_scene->removeAllNodes();
 }
 
 void MayaViewer::initialize()
@@ -43,7 +57,7 @@ void MayaViewer::initialize()
 
 void MayaViewer::finalize()
 {
-	SAFE_RELEASE(_scene);
+	SAFE_RELEASE(_scene);	
 }
 
 void MayaViewer::update(float elapsedTime)
@@ -147,7 +161,12 @@ void MayaViewer::update(float elapsedTime)
 		{
 			Node* pNode = _scene->findNode(mainHeader->name);
 			if (pNode)
+			{
+				pNode->setDrawable(nullptr);
+				pNode->setCamera(nullptr);
+				pNode->setLight(nullptr);
 				_scene->removeNode(pNode);
+			}
 
 			break;
 		}
@@ -250,6 +269,8 @@ void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const
 	Node* pNode = _scene->addNode(mainHeader->name.cStr);
 
 	Model* pModel = Model::create(pMesh);
+	SAFE_RELEASE(pMesh);
+
 	if (!pModel)
 	{
 		OutputDebugString(L"createNode | Failed to create model...\n");
@@ -259,7 +280,6 @@ void MayaViewer::createNode(const MeshInfoHeader& header, void* pMeshData, const
 	createColoredMaterial(pModel);
 
 	pNode->setDrawable(pModel);
-	SAFE_RELEASE(pMesh);
 	SAFE_RELEASE(pModel);
 }
 
@@ -330,7 +350,6 @@ void MayaViewer::updateMesh(char* meshData, const MeshInfoHeader& meshInfo, cons
 		return;
 	}
 	
-
 	const size_t vertexBytes = meshInfo.numVertex * sizeof(Vertex);
 
 	void* pOldVertexData = pMesh->mapVertexBuffer();
@@ -383,7 +402,9 @@ void MayaViewer::setCamera(const CameraHeader& camHeader, const char* nodeName)
 	Camera* pCamera = pNode->getCamera();
 	if (!pCamera)
 	{
-		pNode->setCamera(createCamera(camHeader));
+		pCamera = createCamera(camHeader);
+		pNode->setCamera(pCamera);
+		pCamera->release();
 	}
 	else
 	{
@@ -515,7 +536,7 @@ void MayaViewer::setMaterial(const MaterialDataHeader& header, const char* mater
 
 	materials[materialName].color = color;
 	materials[materialName].colored = true;
-
+	
 	for (auto& node : nodes)
 	{
 		if (node.second == materialName)
