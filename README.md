@@ -1,13 +1,3 @@
-This project was an assignment in a course at Blekinge Institute of Technology.
-
-Creators: 
-* Oliver Klingspor ([Olowerr](https://github.com/Olowerr))
-* Adam Åkesson ([Simadra](https://github.com/Simadra))
-
-The visual studio solution consists of two projects. A Maya22 plugin and a Gameplay3D scene.
-By following the instructions below, one can model inside Maya while viewing the scene directly in Gameplay3D.
-Allowing the user to see the model directly with the game engine's shading.
-
 <p float="left">
   <img src="Pics/maya.PNG" width="500" />
   <img src="Pics/maya1.PNG" width="500" /> 
@@ -16,6 +6,18 @@ Allowing the user to see the model directly with the game engine's shading.
   <img src="Pics/maya2.PNG" width="500" />
   <img src="Pics/maya3.PNG" width="500" /> 
 </p>
+
+# Maya22 Gameplay3D
+Maya22-Gameplay3D enables the user to model in Maya while viewing the model inside Gameplay3D in real time. 
+Allowing an artist to view their model with the game engines shading while working on it.
+This was done through a shared memory architecture. A C++ Maya plugin catches events from Maya and dispatches messages containing any relevant data
+to the shared memory. The Gameplay3D scene can then interpret these messages and update the model or scene accordingly.
+
+This project was an assignment in a course at Blekinge Institute of Technology.
+
+Creators: 
+* Oliver Klingspor ([Olowerr](https://github.com/Olowerr))
+* Adam Åkesson ([Simadra](https://github.com/Simadra))
 
 # Instructions
 
