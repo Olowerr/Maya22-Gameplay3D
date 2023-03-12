@@ -1,5 +1,17 @@
-UD1447
-Oliver Klingspor & Adam Åkesson
+This project was an assignment in a course at Blekinge Institute of Technology.
+Creatos: 
+* Oliver Klingspor ([Olowerr](https://github.com/Olowerr))
+* Adam Åkesson ([Simadra](https://github.com/Simadra))
+
+The visual studio solution consists of two projects. A Maya22 plugin and a Gameplay3D scene.
+By following the instructions below, one can model inside Maya while viewing the scene directly in Gameplay3D.
+Allowing the user to see the model directly with the game engine's shading.
+
+![github-small](Pics/maya.PNG)
+![github-small](Pics/maya1.PNG)
+![github-small](Pics/maya2.PNG)
+![github-small](Pics/maya3.PNG)
+
 
 Make sure to read through the whole file before continuing :)
 
